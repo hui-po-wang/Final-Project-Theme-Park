@@ -11,6 +11,8 @@
 #include <IL/il.h>
 #include <vector>
 #include <map>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb/stb_image.h>
 
 #define MENU_TIMER_START 1
 #define MENU_TIMER_STOP 2
@@ -41,9 +43,41 @@ GLfloat mroll = radians(0.0f), mpitch = radians(0.0f), myaw = radians(270.0f);
 
 vec3 eyeVector = vec3(-100, -40, 0);
 mat4 viewMatrix;
+mat4 skybox_viewMatrix;
 int animation_flag = 0;
 
 GLfloat mPos[2];
+typedef struct _texture_data
+{
+	_texture_data() : width(0), height(0), data(0) {}
+	int width;
+	int height;
+	unsigned char* data;
+} texture_data;
+
+texture_data load_png(const char* path)
+{
+    texture_data texture;
+	int n;
+	stbi_uc *data = stbi_load(path, &texture.width, &texture.height, &n, 4);
+	if(data != NULL)
+	{
+		texture.data = new unsigned char[texture.width * texture.height * 4 * sizeof(unsigned char)];
+		memcpy(texture.data, data, texture.width * texture.height * 4 * sizeof(unsigned char));
+		// vertical-mirror image data
+		for (size_t i = 0; i < texture.width; i++)
+		{
+			for (size_t j = 0; j < texture.height / 2; j++)
+			{
+				for(size_t k = 0; k < 4; k++) {
+					std::swap(texture.data[(j * texture.width + i) * 4 + k], texture.data[((texture.height - j - 1) * texture.width + i) * 4 + k]);
+				}
+			}
+		}
+		stbi_image_free(data);
+	}
+    return texture;
+}
 static const GLfloat window_vertex[] =
 {
 	//vec2 position vec2 texture_coord
@@ -52,6 +86,104 @@ static const GLfloat window_vertex[] =
 	-1.0f,1.0f,0.0f,1.0f,
 	1.0f,1.0f,1.0f,1.0f
 };
+class SkyBox{
+
+	public :	
+		SkyBox(){
+			strcpy(filename[0], "CubeMap/skybox_autum_forest_right.png");
+			strcpy(filename[1], "CubeMap/skybox_pine_forest_left.png");
+			strcpy(filename[2], "CubeMap/skybox_autum_forest_bottom.png");
+			strcpy(filename[3], "CubeMap/skybox_autum_forest_top.png");
+			strcpy(filename[4], "CubeMap/skybox_pine_forest_front.png");
+			strcpy(filename[5], "CubeMap/skybox_autum_forest_back.png");
+		};
+		GLuint env_tex;
+		GLuint vao;
+		GLuint program;
+		GLuint um4mvp;
+		void testFileName(){
+			for(int i=0;i<6;i++)
+				printf("%s\n", filename[i]);
+		}
+		void init(){
+			// set up skybox texture and vao
+			glGenVertexArrays(1, &this->vao);
+			glBindVertexArray(this->vao);
+			GLfloat cube_vertices[] = {
+			  -1.0,  1.0,  1.0,
+			  -1.0, -1.0,  1.0,
+			   1.0, -1.0,  1.0,
+			   1.0,  1.0,  1.0,
+			  -1.0,  1.0, -1.0,
+			  -1.0, -1.0, -1.0,
+			   1.0, -1.0, -1.0,
+			   1.0,  1.0, -1.0,
+			};
+			GLuint vbo_cube_vertices;
+			glGenBuffers(1, &vbo_cube_vertices);
+			glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_vertices);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices), cube_vertices, GL_STATIC_DRAW);
+
+			/*GLushort cube_indices[] = {
+			  0, 1, 2, 3,
+			  3, 2, 6, 7,
+			  7, 6, 5, 4,
+			  4, 5, 1, 0,
+			  0, 3, 7, 4,
+			  1, 2, 6, 5,
+			};*/
+			GLushort cube_indices[] = {
+			  0, 1, 2,
+			  3, 0, 2,
+			  3, 2, 6,
+			  3, 6, 7,
+			  0, 3, 4,
+			  3, 7, 4,
+			  1, 2, 6,
+			  6, 5, 1,
+			  4, 7, 5,
+			  5, 7, 6,
+			  1, 0, 4,
+			  4, 5, 1
+			};
+			GLuint ibo_cube_indices;
+			glGenBuffers(1, &ibo_cube_indices);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_indices);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_indices), cube_indices, GL_STATIC_DRAW);
+
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+			glGenTextures(1, &this->env_tex);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, this->env_tex);
+			for(int i=0;i<6;i++){
+				texture_data envmap_data = load_png(this->filename[i]);
+				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, envmap_data.width, envmap_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, envmap_data.data );
+				delete[] envmap_data.data;
+			}
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+		}
+		void draw(mat4 mvp){
+			//view_matrix = translate(mat4(1.0), eyeVector);
+
+			glUseProgram(this->program);
+			glBindVertexArray(this->vao);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, this->env_tex);
+
+			glUniformMatrix4fv(this->um4mvp, 1, GL_FALSE, value_ptr(mvp));
+			glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, 0);
+			
+			/*glDisable(GL_DEPTH_TEST);
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+			glEnable(GL_DEPTH_TEST);*/
+		}
+	private:	
+		char filename[6][100] ;
+};
+SkyBox skyBox;
 class Shape{
 	public :
 		GLuint vao;
@@ -167,7 +299,7 @@ void updateView()
 
 	mat4 trans = mat4(1.0f);
 	trans = translate(trans, eyeVector);
-
+	skybox_viewMatrix = matPitch*matYaw * translate(mat4(1.0), vec3(eyeVector.x, eyeVector.y, eyeVector.z));
 	viewMatrix = rot *  trans;
 }
 void My_Init()
@@ -175,6 +307,26 @@ void My_Init()
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
+
+	// the program for skybox
+	skyBox.program = glCreateProgram();
+	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	char** vertexShaderSource = loadShaderSource("skybox_vertex.vs.glsl");
+	char** fragmentShaderSource = loadShaderSource("skybox_frag.fs.glsl");
+	glShaderSource(vertexShader, 1, vertexShaderSource, NULL);
+    glShaderSource(fragmentShader, 1, fragmentShaderSource, NULL);
+	freeShaderSource(vertexShaderSource);
+	freeShaderSource(fragmentShaderSource);
+    glCompileShader(vertexShader);
+    glCompileShader(fragmentShader);
+	shaderLog(vertexShader);
+    shaderLog(fragmentShader);
+    glAttachShader(skyBox.program, vertexShader);
+    glAttachShader(skyBox.program, fragmentShader);
+    glLinkProgram(skyBox.program);
+	skyBox.um4mvp = glGetUniformLocation(skyBox.program, "um4mvp");
+    glUseProgram(skyBox.program);
 
 	// the program for frame buffer rendering
 	secondFrame.program = glCreateProgram();
@@ -201,10 +353,10 @@ void My_Init()
 		
 	// the program of first scene 
     program = glCreateProgram();
-    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	char** vertexShaderSource = loadShaderSource("vertex.vs.glsl");
-	char** fragmentShaderSource = loadShaderSource("fragment.fs.glsl");
+    vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	vertexShaderSource = loadShaderSource("vertex.vs.glsl");
+	fragmentShaderSource = loadShaderSource("fragment.fs.glsl");
     glShaderSource(vertexShader, 1, vertexShaderSource, NULL);
     glShaderSource(fragmentShader, 1, fragmentShaderSource, NULL);
 	freeShaderSource(vertexShaderSource);
@@ -259,6 +411,9 @@ void My_Init()
 	glFramebufferRenderbuffer( GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, secondFrame.depthrbo);
 	//Set buffertextureto current fbo
 	glFramebufferTexture2D( GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, secondFrame.fboDataTexture, 0 );
+
+	// initialize skyBox
+	skyBox.init();
 }
 void loadOBJ(Scene &scene, char *file_path){
 	std::vector<tinyobj::shape_t> shapes;
@@ -289,7 +444,7 @@ void loadOBJ(Scene &scene, char *file_path){
 			ILuint ilTexName;
 			ilGenImages(1, &ilTexName);
 			ilBindImage(ilTexName);
-			printf("texture path :%s\n", materials[i].diffuse_texname.c_str());
+			//printf("texture path :%s\n", materials[i].diffuse_texname.c_str());
 			if(ilLoadImage(materials[i].diffuse_texname.c_str()))
 			{
 				unsigned char *data = new unsigned char[ilGetInteger(IL_IMAGE_WIDTH) * ilGetInteger(IL_IMAGE_HEIGHT) * 4];
@@ -555,6 +710,14 @@ void My_Display()
 	glViewport( 0, 0, 600, 600);
 	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	updateView();
+	//draw skybox
+	mat4 mvp = perspective(radians(60.0f), 1.0f,0.3f, 100000.0f)*
+	viewMatrix*
+	scale(mat4(), vec3(8000, 8000, 8000));
+	skyBox.draw(mvp);
+
 	glUseProgram(program);
 	
 	// TODO: For Your FBX Model, Get New Animation Here
@@ -568,13 +731,11 @@ void My_Display()
 		glBufferData(GL_ARRAY_BUFFER, new_shapes[i].mesh.positions.size() * sizeof(float), 
 					&new_shapes[i].mesh.positions[0], GL_STATIC_DRAW);
 	}
-	
-	updateView();
 
 	//draw city
-	mat4 mvp = perspective(radians(60.0f), 1.0f,0.3f, 3000.0f)*
-		viewMatrix*
-		translate(scale(mat4(), vec3(2.5, 5, 2.5)),vec3(0,-90,0));
+	mvp = perspective(radians(60.0f), 1.0f,0.3f, 3000.0f)*
+	viewMatrix*
+	translate(scale(mat4(), vec3(2.5, 5, 2.5)),vec3(0,-90,0));
 	drawOBJ(scene, mvp);
 	
 	// draw the zombie
@@ -821,6 +982,7 @@ void My_Menu(int id)
 
 int main(int argc, char *argv[])
 {
+	skyBox.testFileName();
 	// Initialize GLUT and GLEW, then create a window.
 	////////////////////
 	glutInit(&argc, argv);

@@ -45,7 +45,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(SolutionDir)\..\VCLibs\glm;$(SolutionDir)\..\VCLibs\freeglut;$(SolutionDir)\..\VCLibs\glew;$(SolutionDir)\..\VCLibs\texture_loader;$(SolutionDir)\..\VCLibs\fbxsdk;$(SolutionDir)\..\VCLibs\devil;$(SolutionDir)\..\VCLibs\tinyobjloader;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)\..\VCLibs\glm;$(SolutionDir)\..\VCLibs\freeglut;$(SolutionDir)\..\VCLibs\glew;$(SolutionDir)\..\VCLibs\texture_loader;$(SolutionDir)\..\VCLibs\fbxsdk;$(SolutionDir)\..\VCLibs\devil;$(SolutionDir)\..\VCLibs\tinyobjloader;$(SolutionDir)\..\VCLibs\stb;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)\..\VCLibs\freeglut;$(SolutionDir)\..\VCLibs\glew;$(SolutionDir)\..\VCLibs\texture_loader;$(SolutionDir)\..\VCLibs\fbxsdk;$(SolutionDir)\..\VCLibs\devil;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -87,6 +87,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="fragment.fs.glsl" />
+    <None Include="skybox_frag.fs.glsl" />
+    <None Include="skybox_vertex.vs.glsl" />
     <None Include="s_frag.fs.glsl" />
     <None Include="s_vertex.vs.glsl" />
     <None Include="vertex.vs.glsl" />

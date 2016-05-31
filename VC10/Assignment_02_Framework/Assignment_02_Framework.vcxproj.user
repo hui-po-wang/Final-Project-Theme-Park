@@ -5,7 +5,7 @@
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LocalDebuggerEnvironment>PATH=$(SolutionDir)\..\VCLibs\freeglut;$(SolutionDir)\..\VCLibs\glew;$(SolutionDir)\..\VCLibs\devil;$(SolutionDir)\..\VCLibs\glew;$(SolutionDir)\..\VCLibs\fbxsdk;%PATH% $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
+    <LocalDebuggerEnvironment>PATH=$(SolutionDir)\..\VCLibs\freeglut;$(SolutionDir)\..\VCLibs\glew;$(SolutionDir)\..\VCLibs\devil;$(SolutionDir)\..\VCLibs\glew;$(SolutionDir)\..\VCLibs\fbxsdk;$(SolutionDir)\..\VCLibs\stb;$(SolutionDir)\..\VCLibs;%PATH% $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>
