@@ -7,3 +7,7 @@
     3. loadFBX(FbxObj &fbxObj, char *file_path) 功能跟第一個很像
     
 - update project的時候請把model分開放，跟把暫存檔拿掉
+
+**5/31**
+- 新增skybox
+- 更新模組包
