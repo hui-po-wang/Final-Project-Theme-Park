@@ -1,0 +1,45 @@
+﻿已經開始建置於 2016/5/31 下午 12:02:13。
+     1>節點 2 (build 目標) 上的專案 "D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final project\VC10\Assignment_02_Framework\Assignment_02_Framework.vcxproj"。
+     1>InitializeBuildStatus:
+         由於指定了 "AlwaysCreate"，因此正在建立 "Release\Assignment_03_Framework.unsuccessfulbuild"。
+       ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /Zi /nologo /W3 /WX- /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _CONSOLE /Gm- /EHsc /MD /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Release\\" /Fd"Release\vc100.pdb" /Gd /TP /analyze- /errorReport:prompt main.cpp
+         main.cpp
+     1>main.cpp(120): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\include\stdio.h(234) : 請參閱 'fopen' 的宣告
+     1>main.cpp(286): warning C4018: '<' : signed/unsigned 不相符
+     1>main.cpp(323): warning C4018: '<' : signed/unsigned 不相符
+     1>main.cpp(341): warning C4018: '<' : signed/unsigned 不相符
+     1>main.cpp(301): warning C4101: 'texture' : 未參考的區域變數
+     1>main.cpp(407): warning C4018: '<' : signed/unsigned 不相符
+     1>main.cpp(443): warning C4018: '<' : signed/unsigned 不相符
+     1>main.cpp(423): warning C4101: 'texture' : 未參考的區域變數
+     1>main.cpp(528): warning C4018: '<' : signed/unsigned 不相符
+     1>main.cpp(564): warning C4018: '<' : signed/unsigned 不相符
+     1>main.cpp(581): warning C4018: '<' : signed/unsigned 不相符
+     1>main.cpp(650): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
+     1>main.cpp(651): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
+     1>main.cpp(654): warning C4244: '+=' : 將 'float' 轉換為 'GLint'，由於型別不同，可能導致資料遺失
+     1>main.cpp(655): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
+     1>main.cpp(656): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
+     1>main.cpp(665): warning C4244: '=' : 將 'int' 轉換為 'GLfloat'，由於型別不同，可能導致資料遺失
+     1>main.cpp(666): warning C4244: '=' : 將 'int' 轉換為 'GLfloat'，由於型別不同，可能導致資料遺失
+     1>main.cpp(671): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
+     1>main.cpp(672): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final project\VC10\Release\Assignment_03_Framework.exe" /INCREMENTAL:NO /NOLOGO opengl32.lib freeglut.lib glew32.lib libfbxsdk.lib devil.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"Release\Assignment_03_Framework.exe.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final project\VC10\Release\Assignment_03_Framework.pdb" /SUBSYSTEM:CONSOLE /OPT:REF /OPT:ICF /LTCG /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final project\VC10\Release\Assignment_03_Framework.lib" /MACHINE:X86 Release\fbxloader.obj
+         Release\main.obj
+         Release\tinyobjloader.obj
+         正在產生程式碼
+         已完成程式碼產生
+         Assignment_02_Framework.vcxproj -> D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final project\VC10\Release\Assignment_03_Framework.exe
+       Manifest:
+         C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\mt.exe /nologo /verbose /outputresource:"D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final project\VC10\Release\Assignment_03_Framework.exe;#1" /manifest Release\Assignment_03_Framework.exe.intermediate.manifest
+       FinalizeBuildStatus:
+         正在刪除檔案 "Release\Assignment_03_Framework.unsuccessfulbuild"。
+         正在變更時間戳記 "Release\Assignment_03_Framework.lastbuildstate"。
+     1>專案 "D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final project\VC10\Assignment_02_Framework\Assignment_02_Framework.vcxproj" (build 目標) 建置完成。
+
+建置成功。
+
+經過時間 00:00:06.23
