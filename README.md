@@ -11,3 +11,8 @@
 **5/31**
 - 新增skybox
 - 更新模組包
+
+**6/8**
+- update README
+- 新增 water rendering
+- 更新模組包 ： https://drive.google.com/file/d/0B512lwbc5_ZFWlQ2SmNSNE04UDQ/view
