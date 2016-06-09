@@ -1,0 +1,48 @@
+﻿已經開始建置於 2016/6/9 下午 03:14:38。
+     1>節點 2 (build 目標) 上的專案 "D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final-Project-Theme-Park\VC10\Assignment_02_Framework\Assignment_02_Framework.vcxproj"。
+     1>InitializeBuildStatus:
+         正在變更時間戳記 "Debug\Assignment_03_Framework.unsuccessfulbuild"。
+       ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc100.pdb" /Gd /TP /analyze- /errorReport:prompt main.cpp
+         main.cpp
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(71): warning C4018: '<' : signed/unsigned 不相符
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(73): warning C4018: '<' : signed/unsigned 不相符
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(96): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 c:\program files (x86)\microsoft visual studio 10.0\vc\include\string.h(105) : 請參閱 'strcpy' 的宣告
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(97): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 c:\program files (x86)\microsoft visual studio 10.0\vc\include\string.h(105) : 請參閱 'strcpy' 的宣告
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(98): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 c:\program files (x86)\microsoft visual studio 10.0\vc\include\string.h(105) : 請參閱 'strcpy' 的宣告
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(99): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 c:\program files (x86)\microsoft visual studio 10.0\vc\include\string.h(105) : 請參閱 'strcpy' 的宣告
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(100): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 c:\program files (x86)\microsoft visual studio 10.0\vc\include\string.h(105) : 請參閱 'strcpy' 的宣告
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(101): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 c:\program files (x86)\microsoft visual studio 10.0\vc\include\string.h(105) : 請參閱 'strcpy' 的宣告
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(348): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 c:\program files (x86)\microsoft visual studio 10.0\vc\include\stdio.h(234) : 請參閱 'fopen' 的宣告
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(559): warning C4018: '<' : signed/unsigned 不相符
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(599): warning C4018: '<' : signed/unsigned 不相符
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(617): warning C4018: '<' : signed/unsigned 不相符
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(574): warning C4101: 'texture' : 未參考的區域變數
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(689): warning C4018: '<' : signed/unsigned 不相符
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(725): warning C4018: '<' : signed/unsigned 不相符
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(705): warning C4101: 'texture' : 未參考的區域變數
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(810): warning C4018: '<' : signed/unsigned 不相符
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(859): warning C4018: '<' : signed/unsigned 不相符
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(943): warning C4244: '+=' : 將 'double' 轉換為 'float'，由於型別不同，可能導致資料遺失
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(944): error C2296: '%=' : 不合法，左運算元具有型別 'float'
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(1039): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(1040): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(1043): warning C4244: '+=' : 將 'float' 轉換為 'GLint'，由於型別不同，可能導致資料遺失
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(1044): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(1045): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(1054): warning C4244: '=' : 將 'int' 轉換為 'GLfloat'，由於型別不同，可能導致資料遺失
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(1055): warning C4244: '=' : 將 'int' 轉換為 'GLfloat'，由於型別不同，可能導致資料遺失
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(1060): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
+     1>d:\stephen\nthu\opengl_programing\final\102062309_as3\final-project-theme-park\vc10\assignment_02_framework\main.cpp(1061): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
+     1>專案 "D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final-Project-Theme-Park\VC10\Assignment_02_Framework\Assignment_02_Framework.vcxproj" (build 目標) 建置完成 -- 失敗。
+
+建置失敗。
+
+經過時間 00:00:03.67

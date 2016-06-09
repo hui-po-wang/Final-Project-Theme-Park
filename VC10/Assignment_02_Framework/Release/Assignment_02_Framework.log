@@ -1,59 +1,59 @@
-﻿已經開始建置於 2016/5/31 下午 11:58:12。
-     1>節點 2 (build 目標) 上的專案 "D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final project\VC10\Assignment_02_Framework\Assignment_02_Framework.vcxproj"。
+﻿已經開始建置於 2016/6/9 下午 04:28:16。
+     1>節點 2 (build 目標) 上的專案 "D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final-Project-Theme-Park\VC10\Assignment_02_Framework\Assignment_02_Framework.vcxproj"。
      1>InitializeBuildStatus:
          由於指定了 "AlwaysCreate"，因此正在建立 "Release\Assignment_03_Framework.unsuccessfulbuild"。
        ClCompile:
          C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /Zi /nologo /W3 /WX- /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _CONSOLE /Gm- /EHsc /MD /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Release\\" /Fd"Release\vc100.pdb" /Gd /TP /analyze- /errorReport:prompt main.cpp
          main.cpp
-     1>main.cpp(68): warning C4018: '<' : signed/unsigned 不相符
-     1>main.cpp(70): warning C4018: '<' : signed/unsigned 不相符
-     1>main.cpp(93): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-                 C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\include\string.h(105) : 請參閱 'strcpy' 的宣告
-     1>main.cpp(94): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-                 C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\include\string.h(105) : 請參閱 'strcpy' 的宣告
-     1>main.cpp(95): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-                 C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\include\string.h(105) : 請參閱 'strcpy' 的宣告
+     1>main.cpp(71): warning C4018: '<' : signed/unsigned 不相符
+     1>main.cpp(73): warning C4018: '<' : signed/unsigned 不相符
      1>main.cpp(96): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
                  C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\include\string.h(105) : 請參閱 'strcpy' 的宣告
      1>main.cpp(97): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
                  C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\include\string.h(105) : 請參閱 'strcpy' 的宣告
      1>main.cpp(98): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
                  C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\include\string.h(105) : 請參閱 'strcpy' 的宣告
-     1>main.cpp(252): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+     1>main.cpp(99): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\include\string.h(105) : 請參閱 'strcpy' 的宣告
+     1>main.cpp(100): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\include\string.h(105) : 請參閱 'strcpy' 的宣告
+     1>main.cpp(101): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\include\string.h(105) : 請參閱 'strcpy' 的宣告
+     1>main.cpp(348): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
                  C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\include\stdio.h(234) : 請參閱 'fopen' 的宣告
-     1>main.cpp(441): warning C4018: '<' : signed/unsigned 不相符
-     1>main.cpp(478): warning C4018: '<' : signed/unsigned 不相符
-     1>main.cpp(496): warning C4018: '<' : signed/unsigned 不相符
-     1>main.cpp(456): warning C4101: 'texture' : 未參考的區域變數
-     1>main.cpp(562): warning C4018: '<' : signed/unsigned 不相符
-     1>main.cpp(598): warning C4018: '<' : signed/unsigned 不相符
-     1>main.cpp(578): warning C4101: 'texture' : 未參考的區域變數
-     1>main.cpp(683): warning C4018: '<' : signed/unsigned 不相符
-     1>main.cpp(727): warning C4018: '<' : signed/unsigned 不相符
-     1>main.cpp(742): warning C4018: '<' : signed/unsigned 不相符
-     1>main.cpp(811): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
-     1>main.cpp(812): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
-     1>main.cpp(815): warning C4244: '+=' : 將 'float' 轉換為 'GLint'，由於型別不同，可能導致資料遺失
-     1>main.cpp(816): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
-     1>main.cpp(817): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
-     1>main.cpp(826): warning C4244: '=' : 將 'int' 轉換為 'GLfloat'，由於型別不同，可能導致資料遺失
-     1>main.cpp(827): warning C4244: '=' : 將 'int' 轉換為 'GLfloat'，由於型別不同，可能導致資料遺失
-     1>main.cpp(832): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
-     1>main.cpp(833): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
+     1>main.cpp(559): warning C4018: '<' : signed/unsigned 不相符
+     1>main.cpp(599): warning C4018: '<' : signed/unsigned 不相符
+     1>main.cpp(617): warning C4018: '<' : signed/unsigned 不相符
+     1>main.cpp(574): warning C4101: 'texture' : 未參考的區域變數
+     1>main.cpp(689): warning C4018: '<' : signed/unsigned 不相符
+     1>main.cpp(725): warning C4018: '<' : signed/unsigned 不相符
+     1>main.cpp(705): warning C4101: 'texture' : 未參考的區域變數
+     1>main.cpp(810): warning C4018: '<' : signed/unsigned 不相符
+     1>main.cpp(859): warning C4018: '<' : signed/unsigned 不相符
+     1>main.cpp(944): warning C4305: '+=' : 從 'double' 轉換為 'float'，是由較大的型別轉換為較小的型別，可能導致資料遺失
+     1>main.cpp(1043): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
+     1>main.cpp(1044): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
+     1>main.cpp(1047): warning C4244: '+=' : 將 'float' 轉換為 'GLint'，由於型別不同，可能導致資料遺失
+     1>main.cpp(1048): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
+     1>main.cpp(1049): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
+     1>main.cpp(1058): warning C4244: '=' : 將 'int' 轉換為 'GLfloat'，由於型別不同，可能導致資料遺失
+     1>main.cpp(1059): warning C4244: '=' : 將 'int' 轉換為 'GLfloat'，由於型別不同，可能導致資料遺失
+     1>main.cpp(1064): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
+     1>main.cpp(1065): warning C4244: '=' : 將 'int' 轉換為 'float'，由於型別不同，可能導致資料遺失
        Link:
-         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final project\VC10\Release\Assignment_03_Framework.exe" /INCREMENTAL:NO /NOLOGO opengl32.lib freeglut.lib glew32.lib libfbxsdk.lib devil.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"Release\Assignment_03_Framework.exe.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final project\VC10\Release\Assignment_03_Framework.pdb" /SUBSYSTEM:CONSOLE /OPT:REF /OPT:ICF /LTCG /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final project\VC10\Release\Assignment_03_Framework.lib" /MACHINE:X86 Release\fbxloader.obj
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final-Project-Theme-Park\VC10\Release\Assignment_03_Framework.exe" /INCREMENTAL:NO /NOLOGO opengl32.lib freeglut.lib glew32.lib libfbxsdk.lib devil.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"Release\Assignment_03_Framework.exe.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final-Project-Theme-Park\VC10\Release\Assignment_03_Framework.pdb" /SUBSYSTEM:CONSOLE /OPT:REF /OPT:ICF /LTCG /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final-Project-Theme-Park\VC10\Release\Assignment_03_Framework.lib" /MACHINE:X86 Release\fbxloader.obj
          Release\main.obj
          Release\tinyobjloader.obj
          正在產生程式碼
          已完成程式碼產生
-         Assignment_02_Framework.vcxproj -> D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final project\VC10\Release\Assignment_03_Framework.exe
+         Assignment_02_Framework.vcxproj -> D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final-Project-Theme-Park\VC10\Release\Assignment_03_Framework.exe
        Manifest:
-         C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\mt.exe /nologo /verbose /outputresource:"D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final project\VC10\Release\Assignment_03_Framework.exe;#1" /manifest Release\Assignment_03_Framework.exe.intermediate.manifest
+         C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\mt.exe /nologo /verbose /outputresource:"D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final-Project-Theme-Park\VC10\Release\Assignment_03_Framework.exe;#1" /manifest Release\Assignment_03_Framework.exe.intermediate.manifest
        FinalizeBuildStatus:
          正在刪除檔案 "Release\Assignment_03_Framework.unsuccessfulbuild"。
          正在變更時間戳記 "Release\Assignment_03_Framework.lastbuildstate"。
-     1>專案 "D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final project\VC10\Assignment_02_Framework\Assignment_02_Framework.vcxproj" (build 目標) 建置完成。
+     1>專案 "D:\Stephen\nthu\opengl_programing\final\102062309_AS3\Final-Project-Theme-Park\VC10\Assignment_02_Framework\Assignment_02_Framework.vcxproj" (build 目標) 建置完成。
 
 建置成功。
 
-經過時間 00:00:07.12
+經過時間 00:00:06.78

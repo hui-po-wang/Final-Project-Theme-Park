@@ -40,7 +40,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(SolutionDir)\..\VCLibs\glm;$(SolutionDir)\..\VCLibs\freeglut;$(SolutionDir)\..\VCLibs\glew;$(SolutionDir)\..\VCLibs\texture_loader;$(SolutionDir)\..\VCLibs\fbxsdk;$(SolutionDir)\..\VCLibs\devil;$(SolutionDir)\..\VCLibs\tinyobjloader;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)\..\VCLibs\glm;$(SolutionDir)\..\VCLibs\freeglut;$(SolutionDir)\..\VCLibs\glew;$(SolutionDir)\..\VCLibs\texture_loader;$(SolutionDir)\..\VCLibs\fbxsdk;$(SolutionDir)\..\VCLibs\devil;$(SolutionDir)\..\VCLibs\tinyobjloader;$(SolutionDir)\..\VCLibs\stb;$(SolutionDir)\..\VCLibs;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)\..\VCLibs\freeglut;$(SolutionDir)\..\VCLibs\glew;$(SolutionDir)\..\VCLibs\texture_loader;$(SolutionDir)\..\VCLibs\fbxsdk;$(SolutionDir)\..\VCLibs\devil;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -92,6 +92,8 @@
     <None Include="s_frag.fs.glsl" />
     <None Include="s_vertex.vs.glsl" />
     <None Include="vertex.vs.glsl" />
+    <None Include="water_frag.fs.glsl" />
+    <None Include="water_vertex.vs.glsl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="fbxloader.h" />

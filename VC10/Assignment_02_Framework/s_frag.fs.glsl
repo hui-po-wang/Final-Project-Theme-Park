@@ -1,4 +1,4 @@
-#version 410
+#version 420 core
 
 //in vec3 vv3color;
 in vec2 vv2texcoord;

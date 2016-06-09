@@ -21,6 +21,9 @@
 #define MENU_ANI_WALK 5
 #define MENU_ANI_FURY 6
 
+const int window_width = 1000;
+const int window_height = 1000;
+
 GLubyte timer_cnt = 0;
 bool timer_enabled = true;
 unsigned int timer_speed = 16;
@@ -41,8 +44,8 @@ GLuint program, floor_program;
 
 GLfloat mroll = radians(0.0f), mpitch = radians(0.0f), myaw = radians(270.0f);
 
-vec3 eyeVector = vec3(-100, -40, 0);
-mat4 viewMatrix;
+vec3 eyeVector = vec3(-100, -100, 0);
+mat4 viewMatrix, water_viewMatrix;
 mat4 skybox_viewMatrix;
 int animation_flag = 0;
 
@@ -184,6 +187,7 @@ class SkyBox{
 		char filename[6][100] ;
 };
 SkyBox skyBox;
+
 class Shape{
 	public :
 		GLuint vao;
@@ -213,6 +217,98 @@ class FbxOBJ{
 		fbx_handles myFbx;
 };
 
+class WaterRendering{
+	public :
+		GLuint vao;
+		GLuint reflectionFbo, refractionFbo;
+		GLuint reflectionDepthrbo, refractionDepthrbo;
+		GLuint program;
+		GLuint window_vertex_buffer;
+		GLuint reflectionFboDataTexture, refractionFboDataTexture, dudvMapTexture;
+		float moveFactor;
+		void init(){
+			moveFactor = 0;
+			glGenVertexArrays(1, &this->vao);
+			glBindVertexArray(this->vao);
+
+			// set up VAO and VBO
+			const float vertices[] = {
+				170, 92, -350,
+				-170, 92, -350,
+				170, 92, 350,
+				-170, 92, -350,
+				-170, 92, 350,
+				170, 92, 350
+			};
+			glGenBuffers(1, &this->window_vertex_buffer);
+			glBindBuffer(GL_ARRAY_BUFFER, this->window_vertex_buffer);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(vertices),
+			vertices, GL_STATIC_DRAW);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*3, 0);
+			glEnableVertexAttribArray( 0 );
+			// set up FBO and TEXTURE
+			// refraction fbo
+			glGenFramebuffers( 1, &this->refractionFbo);//Create FBO
+			glGenRenderbuffers( 1, &this->refractionDepthrbo); //Create Depth RBO
+			glBindRenderbuffer( GL_RENDERBUFFER, this->refractionDepthrbo);
+			glRenderbufferStorage( GL_RENDERBUFFER,GL_DEPTH_COMPONENT32,
+			window_width, window_height);
+			
+			// reflection fbo
+			glGenFramebuffers( 1, &this->reflectionFbo);//Create FBO
+			glGenRenderbuffers( 1, &this->reflectionDepthrbo); //Create Depth RBO
+			glBindRenderbuffer( GL_RENDERBUFFER, this->reflectionDepthrbo);
+			glRenderbufferStorage( GL_RENDERBUFFER,GL_DEPTH_COMPONENT32,
+			window_width, window_height);
+
+			// TEXTURE doesn't have initial value.
+			// refraction texture
+			glGenTextures( 1, &this->refractionFboDataTexture);//Create fobDataTexture
+			glBindTexture( GL_TEXTURE_2D, this->refractionFboDataTexture);
+			glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA,
+			window_width, window_height, 0, GL_RGBA,GL_UNSIGNED_BYTE, NULL);
+			glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT );
+			glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT );
+			glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR );
+			glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR );
+			glBindFramebuffer( GL_DRAW_FRAMEBUFFER, this->refractionFbo );
+			//Set depthrbo to current fbo
+			glFramebufferRenderbuffer( GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, this->refractionDepthrbo);
+			//Set buffer texture to current fbo
+			glFramebufferTexture2D( GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, this->refractionFboDataTexture, 0 );
+
+			// reflection texture
+			glGenTextures( 1, &this->reflectionFboDataTexture);//Create fobDataTexture
+			glBindTexture( GL_TEXTURE_2D, this->reflectionFboDataTexture);
+			glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA,
+			window_width, window_height, 0, GL_RGBA,GL_UNSIGNED_BYTE, NULL);
+			glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT );
+			glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT );
+			glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR );
+			glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR );
+			glBindFramebuffer( GL_DRAW_FRAMEBUFFER, this->reflectionFbo );
+			//Set depthrbo to current fbo
+			glFramebufferRenderbuffer( GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, this->reflectionDepthrbo);
+			//Set buffer texture to current fbo
+			glFramebufferTexture2D( GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, this->reflectionFboDataTexture, 0 );
+
+			// distortion dudv map
+			glGenTextures(1, &this->dudvMapTexture);
+			glBindTexture(GL_TEXTURE_2D, this->dudvMapTexture);
+
+			printf("load Maps/waterDUDV.png\n");
+			texture_data map_data = load_png("Maps/waterDUDV.png");
+			//glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, envmap_data.width, envmap_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, envmap_data.data );
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, map_data.width, map_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, map_data.data);
+			delete[] map_data.data;
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT );
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT );
+		}
+};
+WaterRendering waterRendering;
 class SecondFrame{
 	public :
 		GLuint vao;
@@ -300,6 +396,7 @@ void updateView()
 	mat4 trans = mat4(1.0f);
 	trans = translate(trans, eyeVector);
 	skybox_viewMatrix = matPitch*matYaw * translate(mat4(1.0), vec3(eyeVector.x, eyeVector.y, eyeVector.z));
+	water_viewMatrix = matPitch*matYaw * translate(mat4(1.0), vec3(eyeVector.x, eyeVector.y, eyeVector.z));
 	viewMatrix = rot *  trans;
 }
 void My_Init()
@@ -371,13 +468,31 @@ void My_Init()
 	um4mvp = glGetUniformLocation(program, "um4mvp");
     glUseProgram(program);
 
+	// the program for water rendering
+    waterRendering.program = glCreateProgram();
+    vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	vertexShaderSource = loadShaderSource("water_vertex.vs.glsl");
+	fragmentShaderSource = loadShaderSource("water_frag.fs.glsl");
+    glShaderSource(vertexShader, 1, vertexShaderSource, NULL);
+    glShaderSource(fragmentShader, 1, fragmentShaderSource, NULL);
+	freeShaderSource(vertexShaderSource);
+	freeShaderSource(fragmentShaderSource);
+    glCompileShader(vertexShader);
+    glCompileShader(fragmentShader);
+	shaderLog(vertexShader);
+    shaderLog(fragmentShader);
+    glAttachShader(waterRendering.program, vertexShader);
+    glAttachShader(waterRendering.program, fragmentShader);
+    glLinkProgram(waterRendering.program);
+
 	// enable some settings
 	//glEnable(GL_CULL_FACE);
 	glEnable(GL_TEXTURE_2D);
 	glEnable (GL_BLEND);
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	// initialize FBO
+	// initialize FAO
 	glGenVertexArrays(1, &secondFrame.vao);
 	glBindVertexArray(secondFrame.vao);
 
@@ -396,12 +511,12 @@ void My_Init()
 	glGenRenderbuffers( 1, &secondFrame.depthrbo); //Create Depth RBO
 	glBindRenderbuffer( GL_RENDERBUFFER, secondFrame.depthrbo);
 	glRenderbufferStorage( GL_RENDERBUFFER,GL_DEPTH_COMPONENT32,
-	600, 600);
+	window_width, window_height);
 	glGenTextures( 1, &secondFrame.fboDataTexture);//Create fobDataTexture
 	glBindTexture( GL_TEXTURE_2D, secondFrame.fboDataTexture);
 	// TEXTURE doesn't have initial value.
 	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA,
-	600, 600, 0, GL_RGBA,GL_UNSIGNED_BYTE, NULL);
+	window_width, window_height, 0, GL_RGBA,GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE );
 	glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE );
 	glTexParameteri( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR );
@@ -414,6 +529,9 @@ void My_Init()
 
 	// initialize skyBox
 	skyBox.init();
+	// initialize water rendering
+	waterRendering.init();
+	glEnable(GL_CLIP_DISTANCE0);
 }
 void loadOBJ(Scene &scene, char *file_path){
 	std::vector<tinyobj::shape_t> shapes;
@@ -459,6 +577,9 @@ void loadOBJ(Scene &scene, char *file_path){
 				scene.material_texture_size[i][0] = ilGetInteger(IL_IMAGE_WIDTH);
 				scene.material_texture_size[i][1] = ilGetInteger(IL_IMAGE_HEIGHT);
 				glBindTexture(GL_TEXTURE_2D, scene.material_ids[i]);
+				if(!strcmp(materials[i].diffuse_texname.c_str(), "Maps/sw1qa.jpg")){
+					printf("water id :%d\n", i);
+				}
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT), 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -494,6 +615,12 @@ void loadOBJ(Scene &scene, char *file_path){
 			
 			std::map<int, std::vector<unsigned int>> dictionary;
 			for(int j=0;j<shapes[i].mesh.material_ids.size();j++){
+				if(shapes[i].mesh.material_ids[j] == 8){
+					printf("water vertices\n");
+					printf("v1 : %f\n", shapes[i].mesh.indices[j*3+0]);
+					printf("v2 : %f\n", shapes[i].mesh.indices[j*3+1]);
+					printf("v3 : %f\n", shapes[i].mesh.indices[j*3+2]);
+				}
 				dictionary[shapes[i].mesh.material_ids[j]].push_back(shapes[i].mesh.indices[j*3+0]);
 				dictionary[shapes[i].mesh.material_ids[j]].push_back(shapes[i].mesh.indices[j*3+1]);
 				dictionary[shapes[i].mesh.material_ids[j]].push_back(shapes[i].mesh.indices[j*3+2]);
@@ -678,13 +805,15 @@ void My_LoadModels()
 		loadFBX(zombie[k], zombie_filename[k]);
 	}
 }
-void drawOBJ(Scene& scene, mat4& mvp){
+void drawOBJ(Scene& scene, mat4& mvp, mat4& M, vec4& plane_equation){
 
 	for(int i = 0; i < scene.shapeCount; i++)
 	{
 
 		glBindVertexArray (scene.shapes[i].vao);
 		glUniformMatrix4fv(glGetUniformLocation(program, "um4mvp"), 1, GL_FALSE, value_ptr(mvp));
+		glUniformMatrix4fv(glGetUniformLocation(program, "M"), 1, GL_FALSE, value_ptr(M));
+		glUniform4fv(glGetUniformLocation(program, "plane"), 1, &plane_equation[0]);
 
 		// abandoned codes which used to draw scnens with only material_ids[0]
 		/*glBindTexture(GL_TEXTURE_2D,scene.material_ids[scene.shapes[i].mid]);
@@ -692,6 +821,7 @@ void drawOBJ(Scene& scene, mat4& mvp){
 		glDrawElements(GL_TRIANGLES, scene.shapes[i].iBuffer_elements, GL_UNSIGNED_INT, 0);*/
 
 		for(int j=0;j<scene.shapes[i].iBufNumber;j++){
+
 			glBindTexture(GL_TEXTURE_2D,scene.material_ids[scene.shapes[i].midVector[j]]);
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, scene.shapes[i].iBufVector[j]);
 			glDrawElements(GL_TRIANGLES, scene.shapes[i].iBufElement[j], GL_UNSIGNED_INT, 0);
@@ -703,11 +833,12 @@ void drawOBJ(Scene& scene, mat4& mvp){
 // GLUT callback. Called to draw the scene.
 void My_Display()
 {
-	glBindFramebuffer( GL_DRAW_FRAMEBUFFER,secondFrame.fbo);
+	glActiveTexture(GL_TEXTURE0);
+	//glBindFramebuffer( GL_DRAW_FRAMEBUFFER,secondFrame.fbo);
 
 	//which render buffer attachment is written
 	glDrawBuffer( GL_COLOR_ATTACHMENT0);
-	glViewport( 0, 0, 600, 600);
+	glViewport( 0, 0, window_width, window_height);
 	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -716,9 +847,10 @@ void My_Display()
 	mat4 mvp = perspective(radians(60.0f), 1.0f,0.3f, 100000.0f)*
 	viewMatrix*
 	scale(mat4(), vec3(8000, 8000, 8000));
+	mat4 M = scale(mat4(), vec3(8000, 8000, 8000));
 	skyBox.draw(mvp);
 
-	glUseProgram(program);
+
 	
 	// TODO: For Your FBX Model, Get New Animation Here
 	std::vector<tinyobj::shape_t> new_shapes;
@@ -731,13 +863,109 @@ void My_Display()
 		glBufferData(GL_ARRAY_BUFFER, new_shapes[i].mesh.positions.size() * sizeof(float), 
 					&new_shapes[i].mesh.positions[0], GL_STATIC_DRAW);
 	}
+	updateView();
+	glUseProgram(program);
+	//draw water refraction
+	glEnable(GL_CLIP_DISTANCE0);
+	float const water_height = 25;
+	float camera_distance = 2*fabs(eyeVector.y - (water_height));
 
-	//draw city
+	updateView();
+	M = scale(mat4(), vec3(2.5, 10, 2.5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
 	mvp = perspective(radians(60.0f), 1.0f,0.3f, 3000.0f)*
-	viewMatrix*
-	translate(scale(mat4(), vec3(2.5, 5, 2.5)),vec3(0,-90,0));
-	drawOBJ(scene, mvp);
+	water_viewMatrix *
+	M;
+	glBindFramebuffer( GL_DRAW_FRAMEBUFFER,waterRendering.refractionFbo);
+	//glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
+	glDrawBuffer( GL_COLOR_ATTACHMENT0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	drawOBJ(scene, mvp, M, vec4(0, -1, 0, water_height));
+	//drawOBJ(scene, mvp, M, vec4(0, 1, 0, -1000000));
+
+
+	// draw water reflection
+	eyeVector.y += camera_distance;
+	//eyeVector.y = -eyeVector.y;
+	glUseProgram(program);
+	updateView();
+	M = scale(mat4(), vec3(2.5, 10, 2.5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
+	mvp = perspective(radians(60.0f), 1.0f,0.3f, 3000.0f)*
+	water_viewMatrix *
+	M;
+	glBindFramebuffer( GL_DRAW_FRAMEBUFFER,waterRendering.reflectionFbo);
+	//glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
+	glDrawBuffer( GL_COLOR_ATTACHMENT0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	drawOBJ(scene, mvp, M, vec4(0, 1, 0, -water_height));
+	//drawOBJ(scene, mvp, M, vec4(0, 0, 0, 1000000), 0);
+	//eyeVector.y = -eyeVector.y;
+	eyeVector.y -= camera_distance;
+
+	// draw city
+	glUseProgram(program);
+	updateView();
+	M = scale(mat4(), vec3(2.5, 10, 2.5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
+	mvp = perspective(radians(60.0f), 1.0f,0.3f, 3000.0f)*
+	viewMatrix *
+	M;
+	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
+	glDrawBuffer( GL_COLOR_ATTACHMENT0);
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	drawOBJ(scene, mvp, M, vec4(0, 0, 0, 1000000));
+
+	// draw water
+	M = scale(mat4(), vec3(2.5, 10, 2.5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
+	mvp = perspective(radians(60.0f), 1.0f,0.3f, 3000.0f)*
+	viewMatrix *
+	M;
+	glUseProgram(waterRendering.program);
+	glBindVertexArray(waterRendering.vao);	
+	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
+	glViewport( 0, 0, window_width, window_height);
+	//glClear( GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
 	
+	GLuint texLoc;
+	glActiveTexture(GL_TEXTURE0);
+	texLoc  = glGetUniformLocation(waterRendering.program, "reflectionTex");
+	glUniform1i(texLoc, 0);
+	glBindTexture( GL_TEXTURE_2D, waterRendering.reflectionFboDataTexture);
+
+	glActiveTexture(GL_TEXTURE1);
+	texLoc  = glGetUniformLocation(waterRendering.program, "refractionTex");
+	glUniform1i(texLoc, 1);
+	glBindTexture( GL_TEXTURE_2D, waterRendering.refractionFboDataTexture);
+
+	glActiveTexture(GL_TEXTURE2);
+	texLoc  = glGetUniformLocation(waterRendering.program, "dudvMap");
+	glUniform1i(texLoc, 2);
+	glBindTexture( GL_TEXTURE_2D, waterRendering.dudvMapTexture);
+
+	if(timer_cnt %8 == 0 ){
+		waterRendering.moveFactor += 0.03 ;
+		//if(waterRendering.moveFactor > 1){
+		//	waterRendering.moveFactor -= 1;
+		//}
+	}
+
+	glUniformMatrix4fv(glGetUniformLocation(waterRendering.program, "mvp"), 1, GL_FALSE, value_ptr(mvp));
+	glUniform1f(glGetUniformLocation(waterRendering.program, "moveFactor"), waterRendering.moveFactor);
+	glDrawArrays(GL_TRIANGLES,0,6 );
+	
+	/*glUseProgram(program);
+	updateView();
+	M = scale(mat4(), vec3(2.5, 10, 2.5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-92,0));
+	mvp = perspective(radians(60.0f), 1.0f,0.3f, 3000.0f)*
+	viewMatrix *
+	M;
+	//glBindFramebuffer( GL_DRAW_FRAMEBUFFER,waterRefraction.fbo);
+	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
+	glDrawBuffer( GL_COLOR_ATTACHMENT0);
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//drawOBJ(scene, mvp, M, vec4(0, -1, 0, water_height));
+	glDisable(GL_CLIP_DISTANCE0);
+	drawOBJ(scene, mvp, M, vec4(0, 0, 0, 1000000));*/
+
+	/*glUseProgram(program);
 	// draw the zombie
 	for(int i=0;i<zombie[animation_flag].scene.shapeCount;i++){
 		// 1. Bind The VAO of the Shape
@@ -748,24 +976,28 @@ void My_Display()
 		mat4 mvp1 =perspective(radians(60.0f), 1.0f,0.3f, 3000.0f)*
 			viewMatrix *
 			translate(mat4(),vec3(-120,50,0))*scale(mat4(),vec3(4.0f,4.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(90.0f),vec3(1,0,0));
+		M = translate(mat4(),vec3(-120,50,0))*scale(mat4(),vec3(4.0f,4.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(90.0f),vec3(1,0,0));
 		glUniformMatrix4fv(glGetUniformLocation(program, "um4mvp"), 1, GL_FALSE, value_ptr(mvp1));
+		glUniformMatrix4fv(glGetUniformLocation(program, "M"), 1, GL_FALSE, value_ptr(M));
 
 		glBindTexture(GL_TEXTURE_2D,zombie[animation_flag].scene.material_ids[zombie[animation_flag].scene.shapes[i].mid]);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, zombie[animation_flag].scene.shapes[i].iBuffer);
 		glDrawElements(GL_TRIANGLES, zombie[animation_flag].scene.shapes[i].iBuffer_elements, GL_UNSIGNED_INT, 0);
-	}
+	}*/
 
 	// frame buffer rendering
 
-	/*glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
-	glViewport( 0, 0, 600, 600);
+	/*
+	glUseProgram(program);
+	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
+	glViewport( 0, 0, window_width, window_height);
 	glClear( GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
 	
 	glBindTexture( GL_TEXTURE_2D, secondFrame.fboDataTexture);
 
 	glUseProgram(secondFrame.program);
 	glBindVertexArray(secondFrame.vao);	
-	static const GLfloat img_size[] = {600, 600};
+	static const GLfloat img_size[] = {window_width, window_height};
 	glUniform2fv(um4img_size, 1, img_size);
 	glUniform1i(um4cmp_bar, cmp_bar);
 	glUniform1i(um4control_signal, control_signal);
@@ -778,10 +1010,10 @@ void My_Reshape(int width, int height)
 {
 	glViewport(0, 0, width, height);
 
-	float viewportAspect = (float)width / (float)height;
+	//float viewportAspect = (float)width / (float)height;
 	//mvp = ortho(-10 * viewportAspect, 10 * viewportAspect, -10.0f, 10.0f, 0.0f, 10.0f);
-	mvp = perspective(radians(90.0f), viewportAspect, 0.1f, 10000.0f);
-	mvp = mvp * lookAt(vec3(200.0f, 60.0f, 0.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
+	//mvp = perspective(radians(90.0f), viewportAspect, 0.1f, 10000.0f);
+	//mvp = mvp * lookAt(vec3(200.0f, 0.0f, 0.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
 }
 
 void My_Timer(int val)
@@ -824,7 +1056,7 @@ void My_Mouse(int button, int state, int x, int y)
 	{
 		if(control_signal == 5){
 			mPos[0] = x;
-			mPos[1] = 600 - y;
+			mPos[1] = window_height - y;
 			glUniform2fv(um4mouse_position, 1, mPos);
 		}
 		printf("Mouse %d is pressed at (%d, %d)\n", button, x, y);
@@ -987,8 +1219,8 @@ int main(int argc, char *argv[])
 	////////////////////
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
-	glutInitWindowPosition(100, 100);
-	glutInitWindowSize(600, 600);
+	glutInitWindowPosition(500, 0);
+	glutInitWindowSize(window_width, window_height);
 	glutCreateWindow("Assignment 03 102062309"); // You cannot use OpenGL functions before this line; The OpenGL context must be created first by glutCreateWindow()!
 	glewInit();
 	ilInit();

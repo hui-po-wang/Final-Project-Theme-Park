@@ -1,10 +1,13 @@
-#version 410
+#version 420 core
 
 in vec3 vv3color;
 in vec2 vv2texcoord;
 
 uniform sampler2D s;
 uniform vec2 img_size;
+uniform int isWaterMask;
+uniform int isWater;
+uniform vec4 plane;
 
 layout(location = 0) out vec4 fragColor;
 
@@ -17,4 +20,5 @@ void main()
 		discard;
 	else
 		fragColor = vec4(diffuseColor.rgb, 1.0);
+
 }

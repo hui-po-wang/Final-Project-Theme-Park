@@ -1,4 +1,4 @@
-#version 410 core
+#version 420 core
 
 uniform samplerCube tex_cubemap; 
 
