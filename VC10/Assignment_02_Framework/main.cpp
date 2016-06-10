@@ -81,6 +81,45 @@ texture_data load_png(const char* path)
 	}
     return texture;
 }
+
+char** loadShaderSource(const char* file)
+{
+	FILE* fp = fopen(file, "rb");
+	fseek(fp, 0, SEEK_END);
+	long sz = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+	char *src = new char[sz + 1];
+	fread(src, sizeof(char), sz, fp);
+	src[sz] = '\0';
+	char **srcp = new char*[1];
+	srcp[0] = src;
+	return srcp;
+}
+
+void freeShaderSource(char** srcp)
+{
+	delete srcp[0];
+	delete srcp;
+}
+
+void shaderLog(GLuint shader)
+{
+
+	GLint isCompiled = 0;
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
+	if(isCompiled == GL_FALSE)
+	{
+		GLint maxLength = 0;
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
+
+		// The maxLength includes the NULL character
+		GLchar* errorLog = new GLchar[maxLength];
+		glGetShaderInfoLog(shader, maxLength, &maxLength, &errorLog[0]);
+
+		printf("%s\n", errorLog);
+		delete errorLog;
+	}
+}
 static const GLfloat window_vertex[] =
 {
 	//vec2 position vec2 texture_coord
@@ -170,10 +209,10 @@ class SkyBox{
 			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 		}
 		void draw(mat4 mvp){
-			//view_matrix = translate(mat4(1.0), eyeVector);
 
 			glUseProgram(this->program);
 			glBindVertexArray(this->vao);
+			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, this->env_tex);
 
 			glUniformMatrix4fv(this->um4mvp, 1, GL_FALSE, value_ptr(mvp));
@@ -217,6 +256,182 @@ class FbxOBJ{
 		fbx_handles myFbx;
 };
 
+class Terrain{
+	public:
+		GLuint vao;
+		GLuint tex_displacement, tex_color;
+		GLuint program;
+		GLuint vertex_buffer;
+		GLuint loc_mv_matrix, loc_mvp_matrix, loc_proj_matrix, loc_dmap_depth, loc_enable_fog, loc_tex_color, loc_m_matrix;
+		GLuint LocTex_heightMap, LocTex_surfaceMap;
+		float dmap_depth;
+		bool wireframe, enable_fog, enable_displacement;
+		void init(){
+			// init program
+			this->program = glCreateProgram();
+
+			GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+			GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+			GLuint tcs = glCreateShader(GL_TESS_CONTROL_SHADER);
+			GLuint tes = glCreateShader(GL_TESS_EVALUATION_SHADER);
+
+			char** vertexShaderSource = loadShaderSource("terrain_vertex.vs.glsl");
+			char** fragmentShaderSource = loadShaderSource("terrain_fragment.fs.glsl");
+			char** tcsShaderSource = loadShaderSource("terrain_tcs.glsl");
+			char** tesShaderSource = loadShaderSource("terrain_tes.glsl");
+
+			glShaderSource(vertexShader, 1, vertexShaderSource, NULL);
+			glShaderSource(fragmentShader, 1, fragmentShaderSource, NULL);
+			glShaderSource(tcs, 1, tcsShaderSource, NULL);
+			glShaderSource(tes, 1, tesShaderSource, NULL);
+
+			freeShaderSource(vertexShaderSource);
+			freeShaderSource(fragmentShaderSource);
+			freeShaderSource(tcsShaderSource);
+			freeShaderSource(tesShaderSource);
+
+			glCompileShader(vertexShader);
+			glCompileShader(fragmentShader);
+			glCompileShader(tcs);
+			glCompileShader(tes);
+
+			shaderLog(vertexShader);
+			shaderLog(fragmentShader);
+			shaderLog(tcs);
+			shaderLog(tes);
+
+			glAttachShader(this->program, vertexShader);
+			glAttachShader(this->program, fragmentShader);
+			glAttachShader(this->program, tcs);
+			glAttachShader(this->program, tes);
+
+			glLinkProgram(this->program);
+			glUseProgram(this->program);
+
+			glGenVertexArrays(1, &this->vao);
+			glBindVertexArray(this->vao);
+
+			this->loc_mv_matrix = glGetUniformLocation(this->program, "mv_matrix");
+			this->loc_mvp_matrix = glGetUniformLocation(this->program, "mvp_matrix");
+			this->loc_proj_matrix = glGetUniformLocation(this->program, "proj_matrix");
+			this->loc_dmap_depth = glGetUniformLocation(this->program, "dmap_depth");
+			this->loc_enable_fog = glGetUniformLocation(this->program, "enable_fog");
+			this->loc_tex_color = glGetUniformLocation(this->program, "tex_color");
+			this->loc_m_matrix = glGetUniformLocation(this->program, "m_matrix");
+
+			this->dmap_depth = 160.0f;
+
+			//texture_data tdata =  load_png("Terrain/heightmap.png");
+			printf("load Terrain/test.png\n");
+			texture_data tdata =  load_png("Terrain/test.png");
+			//texture_data tdata =  load_png("Terrain/terragen.png");
+
+			glEnable(GL_TEXTURE_2D);
+			glGenTextures( 1, &this->tex_displacement );
+			glBindTexture( GL_TEXTURE_2D, this->tex_displacement);
+			glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA32F, tdata.width, tdata.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tdata.data );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+
+			//texture_data tdata2 =  load_png("Terrain/grassFlowers.png");
+			printf("load Terrain/grass_texture1.png\n");
+			texture_data tdata2 =  load_png("Terrain/grass_texture1.png");
+	
+			glGenTextures( 1, &this->tex_color );
+			glBindTexture( GL_TEXTURE_2D, this->tex_color);
+			glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA32F, tdata2.width, tdata2.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tdata2.data );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+			glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+	
+			glPatchParameteri(GL_PATCH_VERTICES, 4);
+
+			
+
+			this->enable_displacement =true;
+			this->wireframe = false;
+			this->enable_fog = false;
+
+		}
+		void draw(mat4& M, mat4& V, mat4& P){
+			glEnable(GL_CULL_FACE);
+			static const GLfloat black[] = { 0.85f, 0.95f, 1.0f, 1.0f };
+			static const GLfloat one = 1.0f;
+
+			float f_timer_cnt = glutGet(GLUT_ELAPSED_TIME);
+			float currentTime = f_timer_cnt* 0.001f;
+			float f = (float)currentTime;
+
+			static double last_time = 0.0;
+			static double total_time = 0.0;
+	
+			total_time += (currentTime - last_time);
+			last_time = currentTime;
+
+			float t = (float)total_time * 0.03f;
+			float r = sinf(t * 5.37f) * 15.0f + 16.0f;
+			float h = cosf(t * 4.79f) * 2.0f + 3.2f;
+			glBindVertexArray(this->vao);
+			//glClearBufferfv(GL_COLOR, 0, black);
+			//glClearBufferfv(GL_DEPTH, 0, &one);
+
+			glUseProgram(this->program);
+
+			//mat4 mv_matrix = lookAt(vec3(sinf(t) * r, h, cosf(t) * r), vec3(0.0f), vec3(0.0f, 1.0f, 0.0f)) * translate(mat4(), vec3(0, -10, 0));
+			//mat4 mv_matrix = lookAt(vec3(0, -eyeVector.y, 0), vec3(0.0f), vec3(0.0f, 1.0f, 0.0f));
+			mat4 m_matrix = rotate(scale(translate(mat4(), vec3(-1570, 10, -950)), vec3(10.0, 2.5, 14.0)), radians(-30.0f), vec3(0.0, 1.0, 0.0));
+			mat4 mv_matrix = V  * m_matrix;
+			mat4 proj_matrix = P;
+			//mat4 proj_matrix = mat4();
+			glUniformMatrix4fv(this->loc_mv_matrix, 1, GL_FALSE, value_ptr(mv_matrix));
+			glUniformMatrix4fv(this->loc_m_matrix, 1, GL_FALSE, value_ptr(m_matrix));
+			glUniformMatrix4fv(this->loc_proj_matrix, 1, GL_FALSE, value_ptr(proj_matrix));
+			glUniformMatrix4fv(this->loc_mvp_matrix, 1, GL_FALSE, value_ptr(proj_matrix * mv_matrix));
+			glUniform1f(this->loc_dmap_depth, this->enable_displacement ? this->dmap_depth : 0.0f);
+			glUniform1i(this->loc_enable_fog, this->enable_fog ? 1 : 0);
+			glUniform1i(this->loc_tex_color, 1);
+
+
+			if (wireframe)
+				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			else
+				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+			glActiveTexture(GL_TEXTURE0);
+			GLuint texLoc  = glGetUniformLocation(this->program, "tex_displacement");
+			glUniform1i(texLoc, 0);
+			glBindTexture( GL_TEXTURE_2D, this->tex_displacement);
+
+			glActiveTexture(GL_TEXTURE1);
+			texLoc  = glGetUniformLocation(this->program, "texcolor");
+			glUniform1i(texLoc, 1);
+			glBindTexture( GL_TEXTURE_2D, this->tex_color);
+
+			glDrawArraysInstanced(GL_PATCHES, 0, 4, 128 * 128);
+			glDisable(GL_CULL_FACE);
+		}
+		void decrease_dmap_depth(){
+			printf("curremt dmap_depth:%f\n", this->dmap_depth);
+			this->dmap_depth -= 1.0f;
+		}
+		void increase_dmap_depth(){
+			printf("curremt dmap_depth:%f\n", this->dmap_depth);
+			this->dmap_depth += 1.0f;
+		}
+		void toggle_enable_fog(){
+			enable_fog = !enable_fog;
+		}
+		void toggle_enable_displacement(){
+			enable_displacement = !enable_displacement;
+		}
+		void toggle_enable_wireframe(){
+			wireframe = !wireframe;
+		}
+};
+Terrain terrain;
 class WaterRendering{
 	public :
 		GLuint vao;
@@ -318,7 +533,6 @@ class SecondFrame{
 		GLuint window_vertex_buffer;
 		GLuint fboDataTexture;
 };
-
 SecondFrame secondFrame;
 FbxOBJ zombie[3];
 char zombie_filename[3][100] = {
@@ -333,7 +547,6 @@ void checkError(const char *functionName)
         fprintf (stderr, "GL error 0x%X detected in %s\n", error, functionName);
     }
 }
-
 // Print OpenGL context related information.
 void dumpInfo(void)
 {
@@ -341,45 +554,6 @@ void dumpInfo(void)
     printf("Renderer: %s\n", glGetString (GL_RENDERER));
     printf("Version: %s\n", glGetString (GL_VERSION));
     printf("GLSL: %s\n", glGetString (GL_SHADING_LANGUAGE_VERSION));
-}
-
-char** loadShaderSource(const char* file)
-{
-	FILE* fp = fopen(file, "rb");
-	fseek(fp, 0, SEEK_END);
-	long sz = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-	char *src = new char[sz + 1];
-	fread(src, sizeof(char), sz, fp);
-	src[sz] = '\0';
-	char **srcp = new char*[1];
-	srcp[0] = src;
-	return srcp;
-}
-
-void freeShaderSource(char** srcp)
-{
-	delete srcp[0];
-	delete srcp;
-}
-
-void shaderLog(GLuint shader)
-{
-
-	GLint isCompiled = 0;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
-	if(isCompiled == GL_FALSE)
-	{
-		GLint maxLength = 0;
-		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
-
-		// The maxLength includes the NULL character
-		GLchar* errorLog = new GLchar[maxLength];
-		glGetShaderInfoLog(shader, maxLength, &maxLength, &errorLog[0]);
-
-		printf("%s\n", errorLog);
-		delete errorLog;
-	}
 }
 void updateView()
 {
@@ -532,6 +706,8 @@ void My_Init()
 	// initialize water rendering
 	waterRendering.init();
 	glEnable(GL_CLIP_DISTANCE0);
+	// initialize terrain
+	terrain.init();
 }
 void loadOBJ(Scene &scene, char *file_path){
 	std::vector<tinyobj::shape_t> shapes;
@@ -819,7 +995,7 @@ void drawOBJ(Scene& scene, mat4& mvp, mat4& M, vec4& plane_equation){
 		/*glBindTexture(GL_TEXTURE_2D,scene.material_ids[scene.shapes[i].mid]);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, scene.shapes[i].iBuffer);
 		glDrawElements(GL_TRIANGLES, scene.shapes[i].iBuffer_elements, GL_UNSIGNED_INT, 0);*/
-
+		glActiveTexture(GL_TEXTURE0);
 		for(int j=0;j<scene.shapes[i].iBufNumber;j++){
 
 			glBindTexture(GL_TEXTURE_2D,scene.material_ids[scene.shapes[i].midVector[j]]);
@@ -836,21 +1012,22 @@ void My_Display()
 	glActiveTexture(GL_TEXTURE0);
 	//glBindFramebuffer( GL_DRAW_FRAMEBUFFER,secondFrame.fbo);
 
+	// update view
+	updateView();
+
 	//which render buffer attachment is written
 	glDrawBuffer( GL_COLOR_ATTACHMENT0);
 	glViewport( 0, 0, window_width, window_height);
 	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	updateView();
+	mat4 P = perspective(radians(60.0f), 1.0f,0.3f, 100000.0f);
+	mat4 M = scale(mat4(), vec3(8000, 8000, 8000));
 	//draw skybox
-	mat4 mvp = perspective(radians(60.0f), 1.0f,0.3f, 100000.0f)*
+	mat4 mvp = P*
 	viewMatrix*
 	scale(mat4(), vec3(8000, 8000, 8000));
-	mat4 M = scale(mat4(), vec3(8000, 8000, 8000));
 	skyBox.draw(mvp);
-
-
 	
 	// TODO: For Your FBX Model, Get New Animation Here
 	std::vector<tinyobj::shape_t> new_shapes;
@@ -863,7 +1040,8 @@ void My_Display()
 		glBufferData(GL_ARRAY_BUFFER, new_shapes[i].mesh.positions.size() * sizeof(float), 
 					&new_shapes[i].mesh.positions[0], GL_STATIC_DRAW);
 	}
-	updateView();
+
+
 	glUseProgram(program);
 	//draw water refraction
 	glEnable(GL_CLIP_DISTANCE0);
@@ -872,7 +1050,7 @@ void My_Display()
 
 	updateView();
 	M = scale(mat4(), vec3(2.5, 10, 2.5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
-	mvp = perspective(radians(60.0f), 1.0f,0.3f, 3000.0f)*
+	mvp = P*
 	water_viewMatrix *
 	M;
 	glBindFramebuffer( GL_DRAW_FRAMEBUFFER,waterRendering.refractionFbo);
@@ -886,10 +1064,10 @@ void My_Display()
 	// draw water reflection
 	eyeVector.y += camera_distance;
 	//eyeVector.y = -eyeVector.y;
-	glUseProgram(program);
 	updateView();
+	glUseProgram(program);
 	M = scale(mat4(), vec3(2.5, 10, 2.5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
-	mvp = perspective(radians(60.0f), 1.0f,0.3f, 3000.0f)*
+	mvp = P*
 	water_viewMatrix *
 	M;
 	glBindFramebuffer( GL_DRAW_FRAMEBUFFER,waterRendering.reflectionFbo);
@@ -900,12 +1078,12 @@ void My_Display()
 	//drawOBJ(scene, mvp, M, vec4(0, 0, 0, 1000000), 0);
 	//eyeVector.y = -eyeVector.y;
 	eyeVector.y -= camera_distance;
+	updateView();
 
 	// draw city
 	glUseProgram(program);
-	updateView();
 	M = scale(mat4(), vec3(2.5, 10, 2.5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
-	mvp = perspective(radians(60.0f), 1.0f,0.3f, 3000.0f)*
+	mvp = P*
 	viewMatrix *
 	M;
 	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
@@ -913,9 +1091,13 @@ void My_Display()
 	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	drawOBJ(scene, mvp, M, vec4(0, 0, 0, 1000000));
 
+	// draw terrian
+	M = mat4();
+	terrain.draw(M, viewMatrix, P);
+
 	// draw water
 	M = scale(mat4(), vec3(2.5, 10, 2.5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
-	mvp = perspective(radians(60.0f), 1.0f,0.3f, 3000.0f)*
+	mvp = P*
 	viewMatrix *
 	M;
 	glUseProgram(waterRendering.program);
@@ -940,30 +1122,14 @@ void My_Display()
 	glUniform1i(texLoc, 2);
 	glBindTexture( GL_TEXTURE_2D, waterRendering.dudvMapTexture);
 
-	if(timer_cnt %8 == 0 ){
-		waterRendering.moveFactor += 0.03 ;
-		//if(waterRendering.moveFactor > 1){
-		//	waterRendering.moveFactor -= 1;
-		//}
+	int f = glutGet(GLUT_ELAPSED_TIME);
+	if(timer_cnt % 10 == 0 ){
+		waterRendering.moveFactor += 0.0003 * f * 0.001f;
 	}
 
 	glUniformMatrix4fv(glGetUniformLocation(waterRendering.program, "mvp"), 1, GL_FALSE, value_ptr(mvp));
 	glUniform1f(glGetUniformLocation(waterRendering.program, "moveFactor"), waterRendering.moveFactor);
 	glDrawArrays(GL_TRIANGLES,0,6 );
-	
-	/*glUseProgram(program);
-	updateView();
-	M = scale(mat4(), vec3(2.5, 10, 2.5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-92,0));
-	mvp = perspective(radians(60.0f), 1.0f,0.3f, 3000.0f)*
-	viewMatrix *
-	M;
-	//glBindFramebuffer( GL_DRAW_FRAMEBUFFER,waterRefraction.fbo);
-	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
-	glDrawBuffer( GL_COLOR_ATTACHMENT0);
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//drawOBJ(scene, mvp, M, vec4(0, -1, 0, water_height));
-	glDisable(GL_CLIP_DISTANCE0);
-	drawOBJ(scene, mvp, M, vec4(0, 0, 0, 1000000));*/
 
 	/*glUseProgram(program);
 	// draw the zombie
@@ -1145,6 +1311,21 @@ void My_Keyboard(unsigned char key, int x, int y)
 			break;
 		case 't':
 			printf("current position: %f %f %f\n", eyeVector[0], eyeVector[1], eyeVector[2]);
+			break;
+		case 'n':
+			terrain.increase_dmap_depth();
+			break;
+		case 'm':
+			terrain.decrease_dmap_depth();
+			break;
+		case 'c':
+			terrain.toggle_enable_displacement();
+			break;
+		case 'v':
+			terrain.toggle_enable_fog();
+			break;
+		case 'b':
+			terrain.toggle_enable_wireframe();
 			break;
 	   default:
 		 break;

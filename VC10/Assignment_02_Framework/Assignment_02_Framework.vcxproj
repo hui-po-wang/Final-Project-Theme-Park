@@ -91,6 +91,10 @@
     <None Include="skybox_vertex.vs.glsl" />
     <None Include="s_frag.fs.glsl" />
     <None Include="s_vertex.vs.glsl" />
+    <None Include="terrain_fragment.fs.glsl" />
+    <None Include="terrain_tcs.glsl" />
+    <None Include="terrain_tes.glsl" />
+    <None Include="terrain_vertex.vs.glsl" />
     <None Include="vertex.vs.glsl" />
     <None Include="water_frag.fs.glsl" />
     <None Include="water_vertex.vs.glsl" />

@@ -15,4 +15,13 @@
 **6/8**
 - update README
 - 新增 water rendering
-- 更新模組包 ： https://drive.google.com/file/d/0B512lwbc5_ZFWlQ2SmNSNE04UDQ/view
+- 更新模組包
+
+**6/10**
+- update README
+- 新增 height map 小土丘：
+    1. 按 n, m可以調整小土丘高度
+    2. 按 b 可以toggle wire/fill mode
+    3. 按 c 可以disable height map
+- 修飾一點code
+- 更新模組包 ： https://drive.google.com/file/d/0B512lwbc5_ZFNzJXanhtUmcxM28/view?usp=sharing
