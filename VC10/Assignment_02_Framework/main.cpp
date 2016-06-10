@@ -42,7 +42,7 @@ GLint cmp_bar = 300;
 GLuint um4img_size, um4cmp_bar, um4control_signal, um4mouse_position;
 GLuint program, floor_program;
 
-GLfloat mroll = radians(0.0f), mpitch = radians(0.0f), myaw = radians(270.0f);
+GLfloat mroll = radians(0.0f), mpitch = radians(-11.0f), myaw = radians(300.0f);
 
 vec3 eyeVector = vec3(-100, -100, 0);
 mat4 viewMatrix, water_viewMatrix;
@@ -255,6 +255,268 @@ class FbxOBJ{
 		Scene scene;
 		fbx_handles myFbx;
 };
+void loadOBJ(Scene &scene, char *file_path){
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+
+	std::string err;
+
+	//bool ret = tinyobj::LoadObj(shapes, materials, err, "sponza.obj");
+	//bool ret = tinyobj::LoadObj(shapes, materials, err, "Small Tropical Island.obj");
+	//bool ret = tinyobj::LoadObj(shapes, materials, err, "castle.obj");
+	//bool ret = tinyobj::LoadObj(shapes, materials, err, "The City.obj");
+	bool ret = tinyobj::LoadObj(shapes, materials, err, file_path);
+	//bool ret = tinyobj::LoadObj(shapes, materials, err, "Bulbasaur.obj");
+	//bool ret = tinyobj::LoadObj(shapes, materials, err, "ghv.obj");
+	//bool ret = tinyobj::LoadObj(shapes, materials, err, "Red_Orange_Flower.obj");
+	// TODO: If You Want to Load FBX, Use these. The Returned Values are The Same.
+	//fbx_handles myFbx; // Save this Object, You Will Need It to Retrieve Animations Later.
+	//bool ret = LoadFbx(myFbx, shapes, materials, err, "FBX_FILE_NAME");
+
+	if(ret)
+	{
+		// For Each Material
+		scene.material_ids = new GLuint[materials.size()];
+		scene.material_texture_size = new GLint[materials.size()][2];
+		for(int i = 0; i < materials.size(); i++)
+		{
+			// materials[i].diffuse_texname; // This is the Texture Path You Need
+			ILuint ilTexName;
+			ilGenImages(1, &ilTexName);
+			ilBindImage(ilTexName);
+			//printf("texture path :%s\n", materials[i].diffuse_texname.c_str());
+			if(ilLoadImage(materials[i].diffuse_texname.c_str()))
+			{
+				unsigned char *data = new unsigned char[ilGetInteger(IL_IMAGE_WIDTH) * ilGetInteger(IL_IMAGE_HEIGHT) * 4];
+				// Image Width = ilGetInteger(IL_IMAGE_WIDTH)
+				// Image Height = ilGetInteger(IL_IMAGE_HEIGHT)
+				ilCopyPixels(0, 0, 0, ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT), 1, IL_RGBA, IL_UNSIGNED_BYTE, data);
+
+				// TODO: Generate an OpenGL Texture and use the [unsigned char *data] as Input Here.
+				GLuint texture;
+				glActiveTexture(GL_TEXTURE0);
+				glGenTextures(1, &scene.material_ids[i]);
+				scene.material_texture_size[i][0] = ilGetInteger(IL_IMAGE_WIDTH);
+				scene.material_texture_size[i][1] = ilGetInteger(IL_IMAGE_HEIGHT);
+				glBindTexture(GL_TEXTURE_2D, scene.material_ids[i]);
+				if(!strcmp(materials[i].diffuse_texname.c_str(), "Maps/sw1qa.jpg")){
+					printf("water id :%d\n", i);
+				}
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT), 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+				//glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+				glGenerateMipmap(GL_TEXTURE_2D);
+
+				delete[] data;
+				ilDeleteImages(1, &ilTexName);
+			}
+		}
+
+		// For Each Shape (or Mesh, Object)
+		scene.shapes = new Shape[shapes.size()];
+		scene.shapeCount = shapes.size();
+		for(int i = 0; i < shapes.size(); i++) 
+		{
+			// shapes[i].mesh.positions; // VertexCount * 3 Floats, Load Them to a GL_ARRAY_BUFFER
+			// shapes[i].mesh.normals; // VertexCount * 3 Floats, Load Them to a GL_ARRAY_BUFFER
+			// shapes[i].mesh.texcoords; // VertexCount * 2 Floats, Load Them to a GL_ARRAY_BUFFER
+			// shapes[i].mesh.indices; // TriangleCount * 3 Unsigned Integers, Load Them to a GL_ELEMENT_ARRAY_BUFFER
+			// shapes[i].mesh.material_ids[0] // The Material ID of This Shape
+
+			// TODO: 
+			// 1. Generate and Bind a VAO
+			// 2. Generate and Bind a Buffer for position/normal/texcoord
+			// 3. Upload Data to The Buffers
+			// 4. Generate and Bind a Buffer for indices (Will Be Saved In The VAO, You Can Restore Them By Binding The VAO)
+			// 5. glVertexAttribPointer Calls (Will Be Saved In The VAO, You Can Restore Them By Binding The VAO)
+			glGenVertexArrays(1, &scene.shapes[i].vao);
+			glBindVertexArray(scene.shapes[i].vao);
+			
+			std::map<int, std::vector<unsigned int>> dictionary;
+			for(int j=0;j<shapes[i].mesh.material_ids.size();j++){
+				if(shapes[i].mesh.material_ids[j] == 8){
+					printf("water vertices\n");
+					printf("v1 : %f\n", shapes[i].mesh.indices[j*3+0]);
+					printf("v2 : %f\n", shapes[i].mesh.indices[j*3+1]);
+					printf("v3 : %f\n", shapes[i].mesh.indices[j*3+2]);
+				}
+				dictionary[shapes[i].mesh.material_ids[j]].push_back(shapes[i].mesh.indices[j*3+0]);
+				dictionary[shapes[i].mesh.material_ids[j]].push_back(shapes[i].mesh.indices[j*3+1]);
+				dictionary[shapes[i].mesh.material_ids[j]].push_back(shapes[i].mesh.indices[j*3+2]);
+			}
+			
+			scene.shapes[i].midVector = new GLuint[dictionary.size()];
+			scene.shapes[i].iBufVector = new GLuint[dictionary.size()];
+			scene.shapes[i].iBufElement = new GLuint[dictionary.size()];
+			std::map<int, std::vector<unsigned int>> :: iterator it;
+			int cnt = 0;
+			for(it = dictionary.begin();it!=dictionary.end();++it){
+				int id = it->first;
+				std::vector<unsigned int> indices = it->second;
+
+				scene.shapes[i].iBufElement[cnt] = indices.size();
+				scene.shapes[i].midVector[cnt] = id;
+				glGenBuffers(1, &scene.shapes[i].iBufVector[cnt]);
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, scene.shapes[i].iBufVector[cnt]);
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*indices.size(), &indices[0], GL_STATIC_DRAW);
+				cnt++;
+			}
+			scene.shapes[i].iBufNumber = dictionary.size();
+
+			// the buffer of positions
+			glGenBuffers(1, &scene.shapes[i].buffers[0]);
+			glBindBuffer(GL_ARRAY_BUFFER, scene.shapes[i].buffers[0]);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(float)*shapes[i].mesh.positions.size(), &shapes[i].mesh.positions[0], GL_STATIC_DRAW);
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+			// the buffer of normals
+			glGenBuffers(1, &scene.shapes[i].buffers[1]);
+			glBindBuffer(GL_ARRAY_BUFFER, scene.shapes[i].buffers[1]);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(float)*shapes[i].mesh.normals.size(), &shapes[i].mesh.normals[0], GL_STATIC_DRAW);
+			glEnableVertexAttribArray(1);
+			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+			// the buffer of texcoords
+			glGenBuffers(1, &scene.shapes[i].buffers[2]);
+			glBindBuffer(GL_ARRAY_BUFFER, scene.shapes[i].buffers[2]);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(float)*shapes[i].mesh.texcoords.size(), &shapes[i].mesh.texcoords[0], GL_STATIC_DRAW);
+			glEnableVertexAttribArray(2);
+			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
+			// indices texcoords
+			glGenBuffers(1, &scene.shapes[i].iBuffer);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, scene.shapes[i].iBuffer);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*shapes[i].mesh.indices.size(), &shapes[i].mesh.indices[0], GL_STATIC_DRAW);
+			// material ID
+			scene.shapes[i].mid = shapes[i].mesh.material_ids[0];
+			// number of elements
+			scene.shapes[i].iBuffer_elements = shapes[i].mesh.indices.size();
+			// number of vertices
+			scene.shapes[i].nVertices = shapes[i].mesh.positions.size();
+		}
+	}
+}
+void loadFBX(FbxOBJ &fbxObj, char *file_path){
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+	std::string err;
+	//fbx_handles myFbx; // Save this Object, You Will Need It to Retrieve Animations Later.
+	bool ret = LoadFbx(fbxObj.myFbx, shapes, materials, err, file_path);
+	//bool ret = LoadFbx(fbxObj.myFbx, shapes, materials, err, "testMeow.fbx");
+	if(ret)
+	{
+		// For Each Material
+		fbxObj.scene.material_ids = new GLuint[materials.size()];
+		for(int i = 0; i < materials.size(); i++)
+		{
+			// materials[i].diffuse_texname; // This is the Texture Path You Need
+			ILuint ilTexName;
+			ilGenImages(1, &ilTexName);
+			ilBindImage(ilTexName);
+			//printf("filename:%s\n", materials[i].diffuse_texname.c_str());
+			if(ilLoadImage(materials[i].diffuse_texname.c_str()))
+			{
+				//puts("================IamHere==============");
+				unsigned char *data = new unsigned char[ilGetInteger(IL_IMAGE_WIDTH) * ilGetInteger(IL_IMAGE_HEIGHT) * 4];
+				// Image Width = ilGetInteger(IL_IMAGE_WIDTH)
+				// Image Height = ilGetInteger(IL_IMAGE_HEIGHT)
+				ilCopyPixels(0, 0, 0, ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT), 1, IL_RGBA, IL_UNSIGNED_BYTE, data);
+
+				// TODO: Generate an OpenGL Texture and use the [unsigned char *data] as Input Here.
+				GLuint texture;
+				glActiveTexture(GL_TEXTURE0);
+				glGenTextures(1, &fbxObj.scene.material_ids[i]);
+				glBindTexture(GL_TEXTURE_2D, fbxObj.scene.material_ids[i]);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT), 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+				//glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+				glGenerateMipmap(GL_TEXTURE_2D);
+
+				delete[] data;
+				ilDeleteImages(1, &ilTexName);
+			}
+		}
+
+		// For Each Shape (or Mesh, Object)
+		fbxObj.scene.shapes = new Shape[shapes.size()];
+		fbxObj.scene.shapeCount = shapes.size();
+		for(int i = 0; i < shapes.size(); i++) 
+		{
+			// shapes[i].mesh.positions; // VertexCount * 3 Floats, Load Them to a GL_ARRAY_BUFFER
+			// shapes[i].mesh.normals; // VertexCount * 3 Floats, Load Them to a GL_ARRAY_BUFFER
+			// shapes[i].mesh.texcoords; // VertexCount * 2 Floats, Load Them to a GL_ARRAY_BUFFER
+			// shapes[i].mesh.indices; // TriangleCount * 3 Unsigned Integers, Load Them to a GL_ELEMENT_ARRAY_BUFFER
+			// shapes[i].mesh.material_ids[0] // The Material ID of This Shape
+
+			// TODO: 
+			// 1. Generate and Bind a VAO
+			// 2. Generate and Bind a Buffer for position/normal/texcoord
+			// 3. Upload Data to The Buffers
+			// 4. Generate and Bind a Buffer for indices (Will Be Saved In The VAO, You Can Restore Them By Binding The VAO)
+			// 5. glVertexAttribPointer Calls (Will Be Saved In The VAO, You Can Restore Them By Binding The VAO)
+			glGenVertexArrays(1, &fbxObj.scene.shapes[i].vao);
+			glBindVertexArray(fbxObj.scene.shapes[i].vao);
+			
+			/*std::map<int, std::vector<unsigned int>> dictionary;
+			for(int j=0;j<shapes[i].mesh.material_ids.size();j++){
+				dictionary[shapes[i].mesh.material_ids[j]].push_back(shapes[i].mesh.indices[j*3+0]);
+				dictionary[shapes[i].mesh.material_ids[j]].push_back(shapes[i].mesh.indices[j*3+1]);
+				dictionary[shapes[i].mesh.material_ids[j]].push_back(shapes[i].mesh.indices[j*3+2]);
+			}
+			
+			fbxObj.scene.shapes[i].midVector = new GLuint[dictionary.size()];
+			fbxObj.scene.shapes[i].iBufVector = new GLuint[dictionary.size()];
+			fbxObj.scene.shapes[i].iBufElement = new GLuint[dictionary.size()];
+			std::map<int, std::vector<unsigned int>> :: iterator it;
+			int cnt = 0;
+			for(it = dictionary.begin();it!=dictionary.end();++it){
+				int id = it->first;
+				std::vector<unsigned int> indices = it->second;
+
+				fbxObj.scene.shapes[i].iBufElement[cnt] = indices.size();
+				fbxObj.scene.shapes[i].midVector[cnt] = id;
+				glGenBuffers(1, &fbxObj.scene.shapes[i].iBufVector[cnt]);
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, fbxObj.scene.shapes[i].iBufVector[cnt]);
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*indices.size(), &indices[0], GL_STATIC_DRAW);
+				cnt++;
+			}
+			fbxObj.scene.shapes[i].iBufNumber = dictionary.size();*/
+
+			// the buffer of positions
+			glGenBuffers(1, &fbxObj.scene.shapes[i].buffers[0]);
+			glBindBuffer(GL_ARRAY_BUFFER, fbxObj.scene.shapes[i].buffers[0]);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(float)*shapes[i].mesh.positions.size(), &shapes[i].mesh.positions[0], GL_STATIC_DRAW);
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+			// the buffer of normals
+			glGenBuffers(1, &fbxObj.scene.shapes[i].buffers[1]);
+			glBindBuffer(GL_ARRAY_BUFFER, fbxObj.scene.shapes[i].buffers[1]);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(float)*shapes[i].mesh.normals.size(), &shapes[i].mesh.normals[0], GL_STATIC_DRAW);
+			glEnableVertexAttribArray(1);
+			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+			// the buffer of texcoords
+			glGenBuffers(1, &fbxObj.scene.shapes[i].buffers[2]);
+			glBindBuffer(GL_ARRAY_BUFFER, fbxObj.scene.shapes[i].buffers[2]);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(float)*shapes[i].mesh.texcoords.size(), &shapes[i].mesh.texcoords[0], GL_STATIC_DRAW);
+			glEnableVertexAttribArray(2);
+			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
+			// indices texcoords
+			glGenBuffers(1, &fbxObj.scene.shapes[i].iBuffer);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, fbxObj.scene.shapes[i].iBuffer);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*shapes[i].mesh.indices.size(), &shapes[i].mesh.indices[0], GL_STATIC_DRAW);
+			// material ID
+			fbxObj.scene.shapes[i].mid = shapes[i].mesh.material_ids[0];
+			// number of elements
+			fbxObj.scene.shapes[i].iBuffer_elements = shapes[i].mesh.indices.size();
+			// number of vertices
+			fbxObj.scene.shapes[i].nVertices = shapes[i].mesh.positions.size();
+		}
+	}
+}
 
 class Terrain{
 	public:
@@ -382,7 +644,7 @@ class Terrain{
 
 			//mat4 mv_matrix = lookAt(vec3(sinf(t) * r, h, cosf(t) * r), vec3(0.0f), vec3(0.0f, 1.0f, 0.0f)) * translate(mat4(), vec3(0, -10, 0));
 			//mat4 mv_matrix = lookAt(vec3(0, -eyeVector.y, 0), vec3(0.0f), vec3(0.0f, 1.0f, 0.0f));
-			mat4 m_matrix = rotate(scale(translate(mat4(), vec3(-1570, 10, -950)), vec3(12.0, 2.5, 14.0)), radians(-30.0f), vec3(0.0, 1.0, 0.0));
+			mat4 m_matrix = rotate(scale(translate(mat4(), vec3(-3140, 10, -1900)), vec3(24.0, 2.5, 28.0)), radians(-30.0f), vec3(0.0, 1.0, 0.0));
 			mat4 mv_matrix = V  * m_matrix;
 			mat4 proj_matrix = P;
 			//mat4 proj_matrix = mat4();
@@ -614,6 +876,7 @@ class GameUI{
 		void DrawMenu()
 		{
 			glUseProgram(this->program);
+			glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
 			glBindVertexArray(this->vao);
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, this->texLogo);
@@ -628,7 +891,54 @@ class GameUI{
 
 };
 GameUI gameUI;
+class Player{
+	public:
+		// 0 for standing, 1 for walking, and 2 for attacking
+		FbxOBJ playerAnimation[3];
+		int animationState;
+		void loadContent(){
+			loadFBX(playerAnimation[0], "Pokemon/trainerStand.fbx");
+			loadFBX(playerAnimation[1], "Pokemon/trainer3.fbx");
+			loadFBX(playerAnimation[2], "Pokemon/trainerThrow1.fbx");
+			animationState = 1;
+		}
+		void updateContent(){
+			std::vector<tinyobj::shape_t> new_shapes;
+			float timer = ( (float) timer_cnt/255.0f);
+			GetFbxAnimation(this->playerAnimation[animationState].myFbx, new_shapes, timer); // The Last Parameter is A Float in [0, 1], Specifying The Animation Location You Want to Retrieve
+			for(int i = 0; i < new_shapes.size(); i++)
+			{
+				glBindVertexArray (this->playerAnimation[animationState].scene.shapes[i].vao);
+				glBindBuffer(GL_ARRAY_BUFFER, this->playerAnimation[animationState].scene.shapes[i].buffers[0]);
+				glBufferData(GL_ARRAY_BUFFER, new_shapes[i].mesh.positions.size() * sizeof(float), 
+							&new_shapes[i].mesh.positions[0], GL_STATIC_DRAW);
+			}
+		}
+		void draw(){
+			glUseProgram(program);
+			glActiveTexture(GL_TEXTURE0);
+			for(int i=0;i<this->playerAnimation[animationState].scene.shapeCount;i++){
+				// 1. Bind The VAO of the Shape
+				// 3. Bind Textures
+				// 4. Update Uniform Values by glUniform*
+				// 5. glDrawElements Call
+				glBindVertexArray (this->playerAnimation[animationState].scene.shapes[i].vao);
+				mat4 M = translate(mat4(),vec3(-120+eyeVector.x,50-eyeVector.y,0+eyeVector.z))*scale(mat4(),vec3(4.0f,4.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));
+				mat4 mvp1 =perspective(radians(60.0f), 1.0f,0.3f, 10000.0f)*
+					viewMatrix *
+					M ;
+				
+				glUniformMatrix4fv(glGetUniformLocation(program, "um4mvp"), 1, GL_FALSE, value_ptr(mvp1));
+				glUniformMatrix4fv(glGetUniformLocation(program, "M"), 1, GL_FALSE, value_ptr(M));
 
+				glBindTexture(GL_TEXTURE_2D,this->playerAnimation[animationState].scene.material_ids[this->playerAnimation[animationState].scene.shapes[i].mid]);
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->playerAnimation[animationState].scene.shapes[i].iBuffer);
+				glDrawElements(GL_TRIANGLES, this->playerAnimation[animationState].scene.shapes[i].iBuffer_elements, GL_UNSIGNED_INT, 0);
+			}
+		}
+
+};
+Player player;
 FbxOBJ zombie[3];
 char zombie_filename[3][100] = {
 	"zombie_dead.FBX",
@@ -825,277 +1135,17 @@ void My_Init()
 	gameMode = START_MENU;
 	gameUI.GameStartMenu();
 }
-void loadOBJ(Scene &scene, char *file_path){
-	std::vector<tinyobj::shape_t> shapes;
-	std::vector<tinyobj::material_t> materials;
 
-	std::string err;
-
-	//bool ret = tinyobj::LoadObj(shapes, materials, err, "sponza.obj");
-	//bool ret = tinyobj::LoadObj(shapes, materials, err, "Small Tropical Island.obj");
-	//bool ret = tinyobj::LoadObj(shapes, materials, err, "castle.obj");
-	//bool ret = tinyobj::LoadObj(shapes, materials, err, "The City.obj");
-	bool ret = tinyobj::LoadObj(shapes, materials, err, file_path);
-	//bool ret = tinyobj::LoadObj(shapes, materials, err, "Bulbasaur.obj");
-	//bool ret = tinyobj::LoadObj(shapes, materials, err, "ghv.obj");
-	//bool ret = tinyobj::LoadObj(shapes, materials, err, "Red_Orange_Flower.obj");
-	// TODO: If You Want to Load FBX, Use these. The Returned Values are The Same.
-	//fbx_handles myFbx; // Save this Object, You Will Need It to Retrieve Animations Later.
-	//bool ret = LoadFbx(myFbx, shapes, materials, err, "FBX_FILE_NAME");
-
-	if(ret)
-	{
-		// For Each Material
-		scene.material_ids = new GLuint[materials.size()];
-		scene.material_texture_size = new GLint[materials.size()][2];
-		for(int i = 0; i < materials.size(); i++)
-		{
-			// materials[i].diffuse_texname; // This is the Texture Path You Need
-			ILuint ilTexName;
-			ilGenImages(1, &ilTexName);
-			ilBindImage(ilTexName);
-			//printf("texture path :%s\n", materials[i].diffuse_texname.c_str());
-			if(ilLoadImage(materials[i].diffuse_texname.c_str()))
-			{
-				unsigned char *data = new unsigned char[ilGetInteger(IL_IMAGE_WIDTH) * ilGetInteger(IL_IMAGE_HEIGHT) * 4];
-				// Image Width = ilGetInteger(IL_IMAGE_WIDTH)
-				// Image Height = ilGetInteger(IL_IMAGE_HEIGHT)
-				ilCopyPixels(0, 0, 0, ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT), 1, IL_RGBA, IL_UNSIGNED_BYTE, data);
-
-				// TODO: Generate an OpenGL Texture and use the [unsigned char *data] as Input Here.
-				GLuint texture;
-				glActiveTexture(GL_TEXTURE0);
-				glGenTextures(1, &scene.material_ids[i]);
-				scene.material_texture_size[i][0] = ilGetInteger(IL_IMAGE_WIDTH);
-				scene.material_texture_size[i][1] = ilGetInteger(IL_IMAGE_HEIGHT);
-				glBindTexture(GL_TEXTURE_2D, scene.material_ids[i]);
-				if(!strcmp(materials[i].diffuse_texname.c_str(), "Maps/sw1qa.jpg")){
-					printf("water id :%d\n", i);
-				}
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT), 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-				//glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-				glGenerateMipmap(GL_TEXTURE_2D);
-
-				delete[] data;
-				ilDeleteImages(1, &ilTexName);
-			}
-		}
-
-		// For Each Shape (or Mesh, Object)
-		scene.shapes = new Shape[shapes.size()];
-		scene.shapeCount = shapes.size();
-		for(int i = 0; i < shapes.size(); i++) 
-		{
-			// shapes[i].mesh.positions; // VertexCount * 3 Floats, Load Them to a GL_ARRAY_BUFFER
-			// shapes[i].mesh.normals; // VertexCount * 3 Floats, Load Them to a GL_ARRAY_BUFFER
-			// shapes[i].mesh.texcoords; // VertexCount * 2 Floats, Load Them to a GL_ARRAY_BUFFER
-			// shapes[i].mesh.indices; // TriangleCount * 3 Unsigned Integers, Load Them to a GL_ELEMENT_ARRAY_BUFFER
-			// shapes[i].mesh.material_ids[0] // The Material ID of This Shape
-
-			// TODO: 
-			// 1. Generate and Bind a VAO
-			// 2. Generate and Bind a Buffer for position/normal/texcoord
-			// 3. Upload Data to The Buffers
-			// 4. Generate and Bind a Buffer for indices (Will Be Saved In The VAO, You Can Restore Them By Binding The VAO)
-			// 5. glVertexAttribPointer Calls (Will Be Saved In The VAO, You Can Restore Them By Binding The VAO)
-			glGenVertexArrays(1, &scene.shapes[i].vao);
-			glBindVertexArray(scene.shapes[i].vao);
-			
-			std::map<int, std::vector<unsigned int>> dictionary;
-			for(int j=0;j<shapes[i].mesh.material_ids.size();j++){
-				if(shapes[i].mesh.material_ids[j] == 8){
-					printf("water vertices\n");
-					printf("v1 : %f\n", shapes[i].mesh.indices[j*3+0]);
-					printf("v2 : %f\n", shapes[i].mesh.indices[j*3+1]);
-					printf("v3 : %f\n", shapes[i].mesh.indices[j*3+2]);
-				}
-				dictionary[shapes[i].mesh.material_ids[j]].push_back(shapes[i].mesh.indices[j*3+0]);
-				dictionary[shapes[i].mesh.material_ids[j]].push_back(shapes[i].mesh.indices[j*3+1]);
-				dictionary[shapes[i].mesh.material_ids[j]].push_back(shapes[i].mesh.indices[j*3+2]);
-			}
-			
-			scene.shapes[i].midVector = new GLuint[dictionary.size()];
-			scene.shapes[i].iBufVector = new GLuint[dictionary.size()];
-			scene.shapes[i].iBufElement = new GLuint[dictionary.size()];
-			std::map<int, std::vector<unsigned int>> :: iterator it;
-			int cnt = 0;
-			for(it = dictionary.begin();it!=dictionary.end();++it){
-				int id = it->first;
-				std::vector<unsigned int> indices = it->second;
-
-				scene.shapes[i].iBufElement[cnt] = indices.size();
-				scene.shapes[i].midVector[cnt] = id;
-				glGenBuffers(1, &scene.shapes[i].iBufVector[cnt]);
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, scene.shapes[i].iBufVector[cnt]);
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*indices.size(), &indices[0], GL_STATIC_DRAW);
-				cnt++;
-			}
-			scene.shapes[i].iBufNumber = dictionary.size();
-
-			// the buffer of positions
-			glGenBuffers(1, &scene.shapes[i].buffers[0]);
-			glBindBuffer(GL_ARRAY_BUFFER, scene.shapes[i].buffers[0]);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(float)*shapes[i].mesh.positions.size(), &shapes[i].mesh.positions[0], GL_STATIC_DRAW);
-			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-			// the buffer of normals
-			glGenBuffers(1, &scene.shapes[i].buffers[1]);
-			glBindBuffer(GL_ARRAY_BUFFER, scene.shapes[i].buffers[1]);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(float)*shapes[i].mesh.normals.size(), &shapes[i].mesh.normals[0], GL_STATIC_DRAW);
-			glEnableVertexAttribArray(1);
-			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-			// the buffer of texcoords
-			glGenBuffers(1, &scene.shapes[i].buffers[2]);
-			glBindBuffer(GL_ARRAY_BUFFER, scene.shapes[i].buffers[2]);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(float)*shapes[i].mesh.texcoords.size(), &shapes[i].mesh.texcoords[0], GL_STATIC_DRAW);
-			glEnableVertexAttribArray(2);
-			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
-			// indices texcoords
-			glGenBuffers(1, &scene.shapes[i].iBuffer);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, scene.shapes[i].iBuffer);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*shapes[i].mesh.indices.size(), &shapes[i].mesh.indices[0], GL_STATIC_DRAW);
-			// material ID
-			scene.shapes[i].mid = shapes[i].mesh.material_ids[0];
-			// number of elements
-			scene.shapes[i].iBuffer_elements = shapes[i].mesh.indices.size();
-			// number of vertices
-			scene.shapes[i].nVertices = shapes[i].mesh.positions.size();
-		}
-	}
-}
-void loadFBX(FbxOBJ &fbxObj, char *file_path){
-	std::vector<tinyobj::shape_t> shapes;
-	std::vector<tinyobj::material_t> materials;
-	std::string err;
-	//fbx_handles myFbx; // Save this Object, You Will Need It to Retrieve Animations Later.
-	bool ret = LoadFbx(fbxObj.myFbx, shapes, materials, err, file_path);
-	//bool ret = LoadFbx(fbxObj.myFbx, shapes, materials, err, "testMeow.fbx");
-	if(ret)
-	{
-		// For Each Material
-		fbxObj.scene.material_ids = new GLuint[materials.size()];
-		for(int i = 0; i < materials.size(); i++)
-		{
-			// materials[i].diffuse_texname; // This is the Texture Path You Need
-			ILuint ilTexName;
-			ilGenImages(1, &ilTexName);
-			ilBindImage(ilTexName);
-			printf("filename:%s\n", materials[i].diffuse_texname.c_str());
-			if(ilLoadImage(materials[i].diffuse_texname.c_str()))
-			{
-				//puts("================IamHere==============");
-				unsigned char *data = new unsigned char[ilGetInteger(IL_IMAGE_WIDTH) * ilGetInteger(IL_IMAGE_HEIGHT) * 4];
-				// Image Width = ilGetInteger(IL_IMAGE_WIDTH)
-				// Image Height = ilGetInteger(IL_IMAGE_HEIGHT)
-				ilCopyPixels(0, 0, 0, ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT), 1, IL_RGBA, IL_UNSIGNED_BYTE, data);
-
-				// TODO: Generate an OpenGL Texture and use the [unsigned char *data] as Input Here.
-				GLuint texture;
-				glActiveTexture(GL_TEXTURE0);
-				glGenTextures(1, &fbxObj.scene.material_ids[i]);
-				glBindTexture(GL_TEXTURE_2D, fbxObj.scene.material_ids[i]);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT), 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-				//glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-				glGenerateMipmap(GL_TEXTURE_2D);
-
-				delete[] data;
-				ilDeleteImages(1, &ilTexName);
-			}
-		}
-
-		// For Each Shape (or Mesh, Object)
-		fbxObj.scene.shapes = new Shape[shapes.size()];
-		fbxObj.scene.shapeCount = shapes.size();
-		for(int i = 0; i < shapes.size(); i++) 
-		{
-			// shapes[i].mesh.positions; // VertexCount * 3 Floats, Load Them to a GL_ARRAY_BUFFER
-			// shapes[i].mesh.normals; // VertexCount * 3 Floats, Load Them to a GL_ARRAY_BUFFER
-			// shapes[i].mesh.texcoords; // VertexCount * 2 Floats, Load Them to a GL_ARRAY_BUFFER
-			// shapes[i].mesh.indices; // TriangleCount * 3 Unsigned Integers, Load Them to a GL_ELEMENT_ARRAY_BUFFER
-			// shapes[i].mesh.material_ids[0] // The Material ID of This Shape
-
-			// TODO: 
-			// 1. Generate and Bind a VAO
-			// 2. Generate and Bind a Buffer for position/normal/texcoord
-			// 3. Upload Data to The Buffers
-			// 4. Generate and Bind a Buffer for indices (Will Be Saved In The VAO, You Can Restore Them By Binding The VAO)
-			// 5. glVertexAttribPointer Calls (Will Be Saved In The VAO, You Can Restore Them By Binding The VAO)
-			glGenVertexArrays(1, &fbxObj.scene.shapes[i].vao);
-			glBindVertexArray(fbxObj.scene.shapes[i].vao);
-			
-			/*std::map<int, std::vector<unsigned int>> dictionary;
-			for(int j=0;j<shapes[i].mesh.material_ids.size();j++){
-				dictionary[shapes[i].mesh.material_ids[j]].push_back(shapes[i].mesh.indices[j*3+0]);
-				dictionary[shapes[i].mesh.material_ids[j]].push_back(shapes[i].mesh.indices[j*3+1]);
-				dictionary[shapes[i].mesh.material_ids[j]].push_back(shapes[i].mesh.indices[j*3+2]);
-			}
-			
-			fbxObj.scene.shapes[i].midVector = new GLuint[dictionary.size()];
-			fbxObj.scene.shapes[i].iBufVector = new GLuint[dictionary.size()];
-			fbxObj.scene.shapes[i].iBufElement = new GLuint[dictionary.size()];
-			std::map<int, std::vector<unsigned int>> :: iterator it;
-			int cnt = 0;
-			for(it = dictionary.begin();it!=dictionary.end();++it){
-				int id = it->first;
-				std::vector<unsigned int> indices = it->second;
-
-				fbxObj.scene.shapes[i].iBufElement[cnt] = indices.size();
-				fbxObj.scene.shapes[i].midVector[cnt] = id;
-				glGenBuffers(1, &fbxObj.scene.shapes[i].iBufVector[cnt]);
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, fbxObj.scene.shapes[i].iBufVector[cnt]);
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*indices.size(), &indices[0], GL_STATIC_DRAW);
-				cnt++;
-			}
-			fbxObj.scene.shapes[i].iBufNumber = dictionary.size();*/
-
-			// the buffer of positions
-			glGenBuffers(1, &fbxObj.scene.shapes[i].buffers[0]);
-			glBindBuffer(GL_ARRAY_BUFFER, fbxObj.scene.shapes[i].buffers[0]);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(float)*shapes[i].mesh.positions.size(), &shapes[i].mesh.positions[0], GL_STATIC_DRAW);
-			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-			// the buffer of normals
-			glGenBuffers(1, &fbxObj.scene.shapes[i].buffers[1]);
-			glBindBuffer(GL_ARRAY_BUFFER, fbxObj.scene.shapes[i].buffers[1]);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(float)*shapes[i].mesh.normals.size(), &shapes[i].mesh.normals[0], GL_STATIC_DRAW);
-			glEnableVertexAttribArray(1);
-			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-			// the buffer of texcoords
-			glGenBuffers(1, &fbxObj.scene.shapes[i].buffers[2]);
-			glBindBuffer(GL_ARRAY_BUFFER, fbxObj.scene.shapes[i].buffers[2]);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(float)*shapes[i].mesh.texcoords.size(), &shapes[i].mesh.texcoords[0], GL_STATIC_DRAW);
-			glEnableVertexAttribArray(2);
-			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
-			// indices texcoords
-			glGenBuffers(1, &fbxObj.scene.shapes[i].iBuffer);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, fbxObj.scene.shapes[i].iBuffer);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*shapes[i].mesh.indices.size(), &shapes[i].mesh.indices[0], GL_STATIC_DRAW);
-			// material ID
-			fbxObj.scene.shapes[i].mid = shapes[i].mesh.material_ids[0];
-			// number of elements
-			fbxObj.scene.shapes[i].iBuffer_elements = shapes[i].mesh.indices.size();
-			// number of vertices
-			fbxObj.scene.shapes[i].nVertices = shapes[i].mesh.positions.size();
-		}
-	}
-}
 void My_LoadModels()
 {
 
 	// load the landscape
 	loadOBJ(scene, "Habitat.obj");
 
-	for(int k=0;k<3;k++){
+	player.loadContent();
+	/*for(int k=0;k<3;k++){
 		loadFBX(zombie[k], zombie_filename[k]);
-	}
+	}*/
 }
 void drawOBJ(Scene& scene, mat4& mvp, mat4& M, vec4& plane_equation){
 
@@ -1146,7 +1196,7 @@ void My_Display()
 	skyBox.draw(mvp);
 	
 	// TODO: For Your FBX Model, Get New Animation Here
-	std::vector<tinyobj::shape_t> new_shapes;
+	/*std::vector<tinyobj::shape_t> new_shapes;
 	float timer = ( (float) timer_cnt/255.0f);
 	GetFbxAnimation(zombie[animation_flag].myFbx, new_shapes, timer); // The Last Parameter is A Float in [0, 1], Specifying The Animation Location You Want to Retrieve
 	for(int i = 0; i < new_shapes.size(); i++)
@@ -1155,17 +1205,18 @@ void My_Display()
 		glBindBuffer(GL_ARRAY_BUFFER, zombie[animation_flag].scene.shapes[i].buffers[0]);
 		glBufferData(GL_ARRAY_BUFFER, new_shapes[i].mesh.positions.size() * sizeof(float), 
 					&new_shapes[i].mesh.positions[0], GL_STATIC_DRAW);
-	}
+	}*/
+	player.updateContent();
 
 
 	glUseProgram(program);
 	//draw water refraction
 	glEnable(GL_CLIP_DISTANCE0);
-	float const water_height = 25;
+	float const water_height = 50;
 	float camera_distance = 2*fabs(eyeVector.y - (water_height));
 
 	updateView();
-	M = scale(mat4(), vec3(2.5, 10, 2.5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
+	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
 	mvp = P*
 	water_viewMatrix *
 	M;
@@ -1182,7 +1233,7 @@ void My_Display()
 	//eyeVector.y = -eyeVector.y;
 	updateView();
 	glUseProgram(program);
-	M = scale(mat4(), vec3(2.5, 10, 2.5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
+	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
 	mvp = P*
 	water_viewMatrix *
 	M;
@@ -1198,7 +1249,7 @@ void My_Display()
 
 	// draw city
 	glUseProgram(program);
-	M = scale(mat4(), vec3(2.5, 10, 2.5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
+	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
 	mvp = P*
 	viewMatrix *
 	M;
@@ -1212,7 +1263,7 @@ void My_Display()
 	terrain.draw(M, viewMatrix, P);
 
 	// draw water
-	M = scale(mat4(), vec3(2.5, 10, 2.5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
+	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
 	mvp = P*
 	viewMatrix *
 	M;
@@ -1243,8 +1294,11 @@ void My_Display()
 		waterRendering.moveFactor += 0.0003 * f * 0.001f;
 	}
 
+	mat4 water_view_matrix = lookAt(eyeVector, vec3(0, 0, 0), vec3(0, 1, 0));
 	glUniformMatrix4fv(glGetUniformLocation(waterRendering.program, "mvp"), 1, GL_FALSE, value_ptr(mvp));
 	glUniformMatrix4fv(glGetUniformLocation(waterRendering.program, "model_matrix"), 1, GL_FALSE, value_ptr(M));
+	glUniformMatrix4fv(glGetUniformLocation(waterRendering.program, "view_matrix"), 1, GL_FALSE, value_ptr(water_view_matrix));
+	glUniformMatrix4fv(glGetUniformLocation(waterRendering.program, "proj_matrix"), 1, GL_FALSE, value_ptr(P));
 	glUniform3fv(glGetUniformLocation(waterRendering.program, "cameraPosition"), 1, &eyeVector[0]);
 	glUniform1f(glGetUniformLocation(waterRendering.program, "moveFactor"), waterRendering.moveFactor);
 	glDrawArrays(GL_TRIANGLES,0,6 );
@@ -1254,6 +1308,8 @@ void My_Display()
 		gameUI.DrawMenu();
 
 	}
+
+	player.draw();
 
 	/*glUseProgram(program);
 	// draw the zombie
@@ -1350,6 +1406,7 @@ void My_Mouse(int button, int state, int x, int y)
 			glUniform2fv(um4mouse_position, 1, mPos);
 		}
 		printf("Mouse %d is pressed at (%d, %d)\n", button, x, y);
+		printf("mPitch:%f roll:%f yaw:%f\n", degrees(mpitch), degrees(mroll), degrees(myaw));
 		isPress = true;
 		mouseX = x;
 		mouseY = y;

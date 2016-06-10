@@ -32,3 +32,6 @@
 - 新增Menu :
     1. 可以選按Game mode/View mode(雖然他們現在是一樣的)
 - 更新模組包 ： https://drive.google.com/file/d/0Bx6pSZs1eFGPRy1LOEl0RGFSams/view?usp=sharing
+
+**6/11**
+- create player class

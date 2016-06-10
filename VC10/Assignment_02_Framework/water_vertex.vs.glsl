@@ -4,6 +4,8 @@ layout(location = 0) in vec3 iv3vertex;
 
 uniform mat4 mvp;
 uniform mat4 model_matrix;
+uniform mat4 view_matrix;
+uniform mat4 proj_matrix;
 uniform vec3 cameraPosition;
 
 //out vec2 vv3color;
