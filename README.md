@@ -26,3 +26,9 @@
 - 修飾一點code
 - improving water reality
 - 更新模組包 ： https://drive.google.com/file/d/0B512lwbc5_ZFNzJXanhtUmcxM28/view?usp=sharing
+
+**6/10 -- by Scoly**
+- update README
+- 新增Menu :
+    1. 可以選按Game mode/View mode(雖然他們現在是一樣的)
+- 更新模組包 ： https://drive.google.com/file/d/0Bx6pSZs1eFGPRy1LOEl0RGFSams/view?usp=sharing

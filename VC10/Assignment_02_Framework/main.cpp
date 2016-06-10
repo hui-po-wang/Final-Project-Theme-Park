@@ -534,6 +534,101 @@ class SecondFrame{
 		GLuint fboDataTexture;
 };
 SecondFrame secondFrame;
+enum Mode{START_MENU,GAME_MODE,VIEW_MODE};
+Mode gameMode;
+class GameUI{
+	public:
+		GLuint vao;
+		GLuint vbo;
+		GLuint texLogo;
+		GLuint texGame;
+		GLuint texView;
+		GLuint program;
+		void GameStartMenu()
+		{
+			glGenVertexArrays(1, &this->vao);
+			glBindVertexArray(this->vao);
+			static const GLfloat window_vertex[] =
+			{
+				//vec2 position vec2 texture_coord
+				0.75f*window_height/window_width,-0.15f,1.0f,0.0f,
+				-0.75f*window_height/window_width,-0.15f,0.0f,0.0f,
+				-0.75f*window_height/window_width,0.6f,0.0f,1.0f,
+				0.75f*window_height/window_width,0.6f,1.0f,1.0f,
+
+				0.3f*window_height/window_width,-0.45f,1.0f,0.0f,
+				-0.3f*window_height/window_width,-0.45f,0.0f,0.0f,
+				-0.3f*window_height/window_width,-0.25f,0.0f,1.0f,
+				0.3f*window_height/window_width,-0.25f,1.0f,1.0f,
+
+				0.3f*window_height/window_width,-0.7f,1.0f,0.0f,
+				-0.3f*window_height/window_width,-0.7f,0.0f,0.0f,
+				-0.3f*window_height/window_width,-0.5f,0.0f,1.0f,
+				0.3f*window_height/window_width,-0.5f,1.0f,1.0f
+
+			};
+			/*const float vertices[] = {
+				-1,1,-1,-1,1,1,1,-1,1,1,1,-1
+			};*/
+			glGenBuffers(1, &this->vbo);
+			glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(window_vertex),window_vertex, GL_STATIC_DRAW);
+			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)* 4, 0);
+			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)* 4, (const GLvoid*)(sizeof(GL_FLOAT)* 2));
+			glEnableVertexAttribArray( 0 );
+			glEnableVertexAttribArray( 1 );
+
+			glActiveTexture(GL_TEXTURE0);
+			glGenTextures(1, &this->texLogo);
+			glBindTexture(GL_TEXTURE_2D, this->texLogo);
+
+			printf("load GameUI/pokemonLogo.png\n");
+			texture_data logo_data = load_png("GameUI/pokemonLogo.png");
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, logo_data.width, logo_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, logo_data.data);
+			delete[] logo_data.data;
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+			glActiveTexture(GL_TEXTURE0);
+			glGenTextures(1, &this->texGame);
+			glBindTexture(GL_TEXTURE_2D, this->texGame);
+
+			printf("load GameUI/gameMode.png\n");
+			texture_data logo2_data = load_png("GameUI/gameMode.png");
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, logo2_data.width, logo2_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, logo2_data.data);
+			delete[] logo2_data.data;
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+			glActiveTexture(GL_TEXTURE0);
+			glGenTextures(1, &this->texView);
+			glBindTexture(GL_TEXTURE_2D, this->texView);
+
+			printf("load GameUI/viewMode.png\n");
+			texture_data logo3_data = load_png("GameUI/viewMode.png");
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, logo3_data.width, logo3_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, logo3_data.data);
+			delete[] logo3_data.data;
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		}
+		void DrawMenu()
+		{
+			glUseProgram(this->program);
+			glBindVertexArray(this->vao);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, this->texLogo);
+			glDrawArrays(GL_TRIANGLE_FAN,0,4);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, this->texGame);
+			glDrawArrays(GL_TRIANGLE_FAN,4,4);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, this->texView);
+			glDrawArrays(GL_TRIANGLE_FAN,8,4);
+		}
+
+};
+GameUI gameUI;
+
 FbxOBJ zombie[3];
 char zombie_filename[3][100] = {
 	"zombie_dead.FBX",
@@ -660,6 +755,24 @@ void My_Init()
     glAttachShader(waterRendering.program, fragmentShader);
     glLinkProgram(waterRendering.program);
 
+	// the program for GameUI
+	gameUI.program = glCreateProgram();
+	vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	vertexShaderSource = loadShaderSource("gameUI_vertex.vs.glsl");
+	fragmentShaderSource = loadShaderSource("gameUI_frag.fs.glsl");
+	glShaderSource(vertexShader, 1, vertexShaderSource, NULL);
+    glShaderSource(fragmentShader, 1, fragmentShaderSource, NULL);
+	freeShaderSource(vertexShaderSource);
+	freeShaderSource(fragmentShaderSource);
+    glCompileShader(vertexShader);
+    glCompileShader(fragmentShader);
+	shaderLog(vertexShader);
+    shaderLog(fragmentShader);
+    glAttachShader(gameUI.program, vertexShader);
+    glAttachShader(gameUI.program, fragmentShader);
+    glLinkProgram(gameUI.program);
+
 	// enable some settings
 	//glEnable(GL_CULL_FACE);
 	glEnable(GL_TEXTURE_2D);
@@ -708,6 +821,9 @@ void My_Init()
 	glEnable(GL_CLIP_DISTANCE0);
 	// initialize terrain
 	terrain.init();
+	//GameUI init
+	gameMode = START_MENU;
+	gameUI.GameStartMenu();
 }
 void loadOBJ(Scene &scene, char *file_path){
 	std::vector<tinyobj::shape_t> shapes;
@@ -1133,6 +1249,12 @@ void My_Display()
 	glUniform1f(glGetUniformLocation(waterRendering.program, "moveFactor"), waterRendering.moveFactor);
 	glDrawArrays(GL_TRIANGLES,0,6 );
 
+	if(gameMode == START_MENU)
+	{
+		gameUI.DrawMenu();
+
+	}
+
 	/*glUseProgram(program);
 	// draw the zombie
 	for(int i=0;i<zombie[animation_flag].scene.shapeCount;i++){
@@ -1233,6 +1355,14 @@ void My_Mouse(int button, int state, int x, int y)
 		mouseY = y;
 		if(x<=cmp_bar+10 && x>=cmp_bar-10)
 			pressCmpBar = true;
+		if(gameMode == START_MENU)
+		{
+			if(x>=350 && x<=650 && y>=500 && y<=600) gameMode = GAME_MODE;
+			else if(x>=350 && x<=650 && y>=625 && y<=720) gameMode = VIEW_MODE;
+		}
+		/*else{
+			gameMode = START_MENU;
+		}*/
 		
 	}
 	else if(state == GLUT_UP)

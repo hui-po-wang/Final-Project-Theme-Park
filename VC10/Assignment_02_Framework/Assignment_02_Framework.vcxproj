@@ -87,6 +87,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="fragment.fs.glsl" />
+    <None Include="gameUI_frag.fs.glsl" />
+    <None Include="gameUI_vertex.vs.glsl" />
     <None Include="skybox_frag.fs.glsl" />
     <None Include="skybox_vertex.vs.glsl" />
     <None Include="s_frag.fs.glsl" />
