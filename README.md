@@ -24,4 +24,5 @@
     2. 按 b 可以toggle wire/fill mode
     3. 按 c 可以disable height map
 - 修飾一點code
+- improving water reality
 - 更新模組包 ： https://drive.google.com/file/d/0B512lwbc5_ZFNzJXanhtUmcxM28/view?usp=sharing

@@ -382,7 +382,7 @@ class Terrain{
 
 			//mat4 mv_matrix = lookAt(vec3(sinf(t) * r, h, cosf(t) * r), vec3(0.0f), vec3(0.0f, 1.0f, 0.0f)) * translate(mat4(), vec3(0, -10, 0));
 			//mat4 mv_matrix = lookAt(vec3(0, -eyeVector.y, 0), vec3(0.0f), vec3(0.0f, 1.0f, 0.0f));
-			mat4 m_matrix = rotate(scale(translate(mat4(), vec3(-1570, 10, -950)), vec3(10.0, 2.5, 14.0)), radians(-30.0f), vec3(0.0, 1.0, 0.0));
+			mat4 m_matrix = rotate(scale(translate(mat4(), vec3(-1570, 10, -950)), vec3(12.0, 2.5, 14.0)), radians(-30.0f), vec3(0.0, 1.0, 0.0));
 			mat4 mv_matrix = V  * m_matrix;
 			mat4 proj_matrix = P;
 			//mat4 proj_matrix = mat4();
@@ -1123,11 +1123,13 @@ void My_Display()
 	glBindTexture( GL_TEXTURE_2D, waterRendering.dudvMapTexture);
 
 	int f = glutGet(GLUT_ELAPSED_TIME);
-	if(timer_cnt % 10 == 0 ){
+	if(timer_cnt % 9 == 0 ){
 		waterRendering.moveFactor += 0.0003 * f * 0.001f;
 	}
 
 	glUniformMatrix4fv(glGetUniformLocation(waterRendering.program, "mvp"), 1, GL_FALSE, value_ptr(mvp));
+	glUniformMatrix4fv(glGetUniformLocation(waterRendering.program, "model_matrix"), 1, GL_FALSE, value_ptr(M));
+	glUniform3fv(glGetUniformLocation(waterRendering.program, "cameraPosition"), 1, &eyeVector[0]);
 	glUniform1f(glGetUniformLocation(waterRendering.program, "moveFactor"), waterRendering.moveFactor);
 	glDrawArrays(GL_TRIANGLES,0,6 );
 
