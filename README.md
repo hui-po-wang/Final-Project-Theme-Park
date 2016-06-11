@@ -37,3 +37,12 @@
 - create player class
 - 修好water reflection
 - 調整一下開始畫面
+
+**6/12 -- by Scoly**
+- 加上了fog
+- 加上了setting list
+- 更新模組包 ： https://drive.google.com/file/d/0Bx6pSZs1eFGPeDQtWlNMQ0ozQVE/view?usp=sharing
+- TODOs :
+    1. 暉博可以幫我看一下water的fog是否正確? 順便幫我加一個fog的flag，因為我看不懂你的code...
+    2. Setting list尚未將控制鈕放入
+    3. 誰可以幫我檢查一下新的模組包裡的pokemon是否都運作正常? 

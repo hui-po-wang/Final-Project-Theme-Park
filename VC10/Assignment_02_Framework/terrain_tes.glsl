@@ -5,9 +5,15 @@ layout(quads, fractional_odd_spacing) in;
 uniform sampler2D tex_displacement;                                            
 	                                                                               
 uniform mat4 mv_matrix;
-uniform mat4 m_matrix;                                                        
+uniform mat4 m_matrix;    
+uniform mat4 v_matrix;                                                     
 uniform mat4 proj_matrix;                                                      
-uniform float dmap_depth;                                                      
+uniform float dmap_depth; 
+
+out float visibility;
+
+const float density = 0.0005;
+const float grad = 5;                                                     
 	                                                                               
 in TCS_OUT { vec2 tc;} tes_in[];                                               
 	                                                                               
@@ -35,5 +41,10 @@ void main(void)
 	tes_out.world_coord = p.xyz;                                                                                             
 	tes_out.eye_coord = P_eye.xyz;                                             
 	                                                                               
-	gl_Position = proj_matrix * P_eye;                                         
+	gl_Position = proj_matrix * P_eye;  
+	
+	vec4 posToCam = v_matrix * vec4(tes_out.eye_coord,0.0);
+	float dis = length(posToCam.xyz);
+	visibility = exp(-pow((dis*density),grad));
+	visibility = clamp(visibility,0.3,1.0);                                       
 }                                                                              

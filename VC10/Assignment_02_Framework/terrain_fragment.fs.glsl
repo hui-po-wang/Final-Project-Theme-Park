@@ -5,7 +5,9 @@ out vec4 color;
 uniform sampler2D tex_color;                                               
                                                                            
 uniform bool enable_fog = true;                                            
-uniform vec4 fog_color = vec4(0.7, 0.8, 0.9, 0.0);                         
+uniform vec4 fog_color = vec4(0.7, 0.8, 0.9, 0.0);  
+
+in float visibility;                       
                                                                            
 in TES_OUT                                                                 
 {                                                                          
@@ -37,6 +39,7 @@ void main(void)
     }                                                                      
     else                                                                   
     {                                                                      
-        color = vec4(landscape.rgb, 1.0);                                                 
+        color = vec4(landscape.rgb, 1.0);   
+		color = mix(vec4(0.82, 0.88, 0.9,1.0),color,visibility);                                              
     }                                                                      
 }                                                                          

@@ -4,6 +4,7 @@
 in vec4 clipSpace;
 in vec2 texCoord;
 in vec3 toCameraVector;
+in float visibility;
 
 uniform sampler2D reflectionTex;
 uniform sampler2D refractionTex;
@@ -40,5 +41,6 @@ void main(){
 
 	fragColor = mix(reflectionColor, refractionColor, refractiveFactor);
 	fragColor = mix(fragColor, vec4(0.0, 0.3, 0.5, 1.0), 0.2);
+	fragColor = mix(vec4(0.82, 0.88, 0.9,1.0),fragColor,visibility);
 
 }

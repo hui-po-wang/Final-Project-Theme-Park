@@ -2,6 +2,7 @@
 
 in vec3 vv3color;
 in vec2 vv2texcoord;
+in float visibility;
 
 uniform sampler2D s;
 uniform vec2 img_size;
@@ -18,7 +19,9 @@ void main()
 	vec4 diffuseColor = texture(s, vv2texcoord.st).rgba;
 	if(diffuseColor.a < 0.5)
 		discard;
-	else
+	else{
 		fragColor = vec4(diffuseColor.rgb, 1.0);
+		fragColor = mix(vec4(0.82, 0.88, 0.9,1.0),fragColor,visibility);
+	}
 
 }

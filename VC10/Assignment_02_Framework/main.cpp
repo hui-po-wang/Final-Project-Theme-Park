@@ -524,7 +524,7 @@ class Terrain{
 		GLuint tex_displacement, tex_color;
 		GLuint program;
 		GLuint vertex_buffer;
-		GLuint loc_mv_matrix, loc_mvp_matrix, loc_proj_matrix, loc_dmap_depth, loc_enable_fog, loc_tex_color, loc_m_matrix;
+		GLuint loc_mv_matrix, loc_mvp_matrix, loc_proj_matrix, loc_dmap_depth, loc_enable_fog, loc_tex_color, loc_m_matrix, loc_v_matrix;
 		GLuint LocTex_heightMap, LocTex_surfaceMap;
 		float dmap_depth;
 		bool wireframe, enable_fog, enable_displacement;
@@ -580,6 +580,7 @@ class Terrain{
 			this->loc_enable_fog = glGetUniformLocation(this->program, "enable_fog");
 			this->loc_tex_color = glGetUniformLocation(this->program, "tex_color");
 			this->loc_m_matrix = glGetUniformLocation(this->program, "m_matrix");
+			this->loc_v_matrix = glGetUniformLocation(this->program, "v_matrix");
 
 			this->dmap_depth = 160.0f;
 
@@ -650,6 +651,7 @@ class Terrain{
 			//mat4 proj_matrix = mat4();
 			glUniformMatrix4fv(this->loc_mv_matrix, 1, GL_FALSE, value_ptr(mv_matrix));
 			glUniformMatrix4fv(this->loc_m_matrix, 1, GL_FALSE, value_ptr(m_matrix));
+			glUniformMatrix4fv(this->loc_v_matrix, 1, GL_FALSE, value_ptr(V));
 			glUniformMatrix4fv(this->loc_proj_matrix, 1, GL_FALSE, value_ptr(proj_matrix));
 			glUniformMatrix4fv(this->loc_mvp_matrix, 1, GL_FALSE, value_ptr(proj_matrix * mv_matrix));
 			glUniform1f(this->loc_dmap_depth, this->enable_displacement ? this->dmap_depth : 0.0f);
@@ -802,31 +804,51 @@ class GameUI{
 	public:
 		GLuint vao;
 		GLuint vbo;
-		GLuint texLogo;
-		GLuint texGame;
-		GLuint texView;
+		GLuint tex[10];
 		GLuint program;
+		GLuint mapPress;
+		GLuint setPress;
 		void GameStartMenu()
 		{
 			glGenVertexArrays(1, &this->vao);
 			glBindVertexArray(this->vao);
 			static const GLfloat window_vertex[] =
 			{
-				//vec2 position vec2 texture_coord
+				//LOGO
 				0.75f*window_height/window_width,-0.15f,1.0f,0.0f,
 				-0.75f*window_height/window_width,-0.15f,0.0f,0.0f,
 				-0.75f*window_height/window_width,0.6f,0.0f,1.0f,
 				0.75f*window_height/window_width,0.6f,1.0f,1.0f,
-
+				//GAME MODE
 				0.3f*window_height/window_width,-0.45f,1.0f,0.0f,
 				-0.3f*window_height/window_width,-0.45f,0.0f,0.0f,
 				-0.3f*window_height/window_width,-0.25f,0.0f,1.0f,
 				0.3f*window_height/window_width,-0.25f,1.0f,1.0f,
-
+				//VIEW MODE
 				0.3f*window_height/window_width,-0.7f,1.0f,0.0f,
 				-0.3f*window_height/window_width,-0.7f,0.0f,0.0f,
 				-0.3f*window_height/window_width,-0.5f,0.0f,1.0f,
-				0.3f*window_height/window_width,-0.5f,1.0f,1.0f
+				0.3f*window_height/window_width,-0.5f,1.0f,1.0f,
+				//SETTING LIST
+				-0.35f*window_height/window_width,-1.0f,1.0f,0.0f,
+				-1.0f*window_height/window_width,-1.0f,0.0f,0.0f,
+				-1.0f*window_height/window_width,0.3f,0.0f,1.0f,
+				-0.35f*window_height/window_width,0.3f,1.0f,1.0f,
+				//MENU
+				-0.8f*window_height/window_width,-0.95f,1.0f,0.0f,
+				-0.95f*window_height/window_width,-0.95f,0.0f,0.0f,
+				-0.95f*window_height/window_width,-0.8f,0.0f,1.0f,
+				-0.8f*window_height/window_width,-0.8f,1.0f,1.0f,
+				//LIST
+				-0.62f*window_height/window_width,-0.95f,1.0f,0.0f,
+				-0.77f*window_height/window_width,-0.95f,0.0f,0.0f,
+				-0.77f*window_height/window_width,-0.8f,0.0f,1.0f,
+				-0.62f*window_height/window_width,-0.8f,1.0f,1.0f,
+				//SETTINGS
+				-0.44f*window_height/window_width,-0.95f,1.0f,0.0f,
+				-0.59f*window_height/window_width,-0.95f,0.0f,0.0f,
+				-0.59f*window_height/window_width,-0.8f,0.0f,1.0f,
+				-0.44f*window_height/window_width,-0.8f,1.0f,1.0f
 
 			};
 			/*const float vertices[] = {
@@ -840,64 +862,72 @@ class GameUI{
 			glEnableVertexAttribArray( 0 );
 			glEnableVertexAttribArray( 1 );
 
-			glActiveTexture(GL_TEXTURE0);
-			glGenTextures(1, &this->texLogo);
-			glBindTexture(GL_TEXTURE_2D, this->texLogo);
+			char filename[10][100];
+			strcpy(filename[0], "GameUI/pokemonLogo.png");
+			strcpy(filename[1], "GameUI/gameMode.png");
+			strcpy(filename[2], "GameUI/viewMode.png");
+			strcpy(filename[3], "GameUI/settingList1.png");
+			strcpy(filename[4], "GameUI/home-icon2.png");
+			strcpy(filename[5], "GameUI/Book-icon.png");
+			strcpy(filename[6], "GameUI/settings.png");
 
-			printf("load GameUI/pokemonLogo.png\n");
-			texture_data logo_data = load_png("GameUI/pokemonLogo.png");
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, logo_data.width, logo_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, logo_data.data);
-			delete[] logo_data.data;
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-			glActiveTexture(GL_TEXTURE0);
-			glGenTextures(1, &this->texGame);
-			glBindTexture(GL_TEXTURE_2D, this->texGame);
+			for(int i=0;i<7;i++)
+			{
+				glActiveTexture(GL_TEXTURE0);
+				glGenTextures(1, &this->tex[i]);
+				glBindTexture(GL_TEXTURE_2D, this->tex[i]);
 
-			printf("load GameUI/gameMode.png\n");
-			texture_data logo2_data = load_png("GameUI/gameMode.png");
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, logo2_data.width, logo2_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, logo2_data.data);
-			delete[] logo2_data.data;
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				printf("load %s\n",filename[i]);
+				texture_data logo_data = load_png(filename[i]);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, logo_data.width, logo_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, logo_data.data);
+				delete[] logo_data.data;
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			}
 
-			glActiveTexture(GL_TEXTURE0);
-			glGenTextures(1, &this->texView);
-			glBindTexture(GL_TEXTURE_2D, this->texView);
-
-			printf("load GameUI/viewMode.png\n");
-			texture_data logo3_data = load_png("GameUI/viewMode.png");
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, logo3_data.width, logo3_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, logo3_data.data);
-			delete[] logo3_data.data;
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		}
 		void DrawMenu()
 		{
 			glUseProgram(this->program);
-			glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
 			glBindVertexArray(this->vao);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, this->texLogo);
-			glDrawArrays(GL_TRIANGLE_FAN,0,4);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, this->texGame);
-			glDrawArrays(GL_TRIANGLE_FAN,4,4);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, this->texView);
-			glDrawArrays(GL_TRIANGLE_FAN,8,4);
+			for(int i=0;i<3;i++){
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->tex[i]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*i,4);
+			}
+		}
+		void DrawMode()
+		{
+			glUseProgram(this->program);
+			glBindVertexArray(this->vao);
+			for(int i=4;i<7;i++){
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->tex[i]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*i,4);
+			}
+		}
+		void DrawSettingList()
+		{
+			glUseProgram(this->program);
+			glBindVertexArray(this->vao);
+			for(int i=3;i<4;i++){
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->tex[i]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*i,4);
+			}
 		}
 
 };
 GameUI gameUI;
 class Camera{
 	// 0 for free, 1 for 3-rd person camera
-	int camera_type;
-	vec3 eyeVector;
-	Camera(){
-		eyeVector = vec3(-100, -100, 0); 
-	};
+	public:
+		int camera_type;
+		vec3 eyeVector;
+		Camera(){
+			eyeVector = vec3(-100, -100, 0); 
+		};
 };
 Camera camera;
 class Player{
@@ -1165,7 +1195,7 @@ void My_LoadModels()
 		loadFBX(zombie[k], zombie_filename[k]);
 	}*/
 }
-void drawOBJ(Scene& scene, mat4& mvp, mat4& M, vec4& plane_equation){
+void drawOBJ(Scene& scene, mat4& mvp, mat4& M, mat4& V, vec4& plane_equation){
 
 	for(int i = 0; i < scene.shapeCount; i++)
 	{
@@ -1173,6 +1203,7 @@ void drawOBJ(Scene& scene, mat4& mvp, mat4& M, vec4& plane_equation){
 		glBindVertexArray (scene.shapes[i].vao);
 		glUniformMatrix4fv(glGetUniformLocation(program, "um4mvp"), 1, GL_FALSE, value_ptr(mvp));
 		glUniformMatrix4fv(glGetUniformLocation(program, "M"), 1, GL_FALSE, value_ptr(M));
+		glUniformMatrix4fv(glGetUniformLocation(program, "V"), 1, GL_FALSE, value_ptr(V));
 		glUniform4fv(glGetUniformLocation(program, "plane"), 1, &plane_equation[0]);
 
 		// abandoned codes which used to draw scnens with only material_ids[0]
@@ -1242,7 +1273,7 @@ void My_Display()
 	//glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
 	glDrawBuffer( GL_COLOR_ATTACHMENT0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	drawOBJ(scene, mvp, M, vec4(0, -1, 0, water_height));
+	drawOBJ(scene, mvp, M, water_viewMatrix, vec4(0, -1, 0, water_height));
 	//drawOBJ(scene, mvp, M, vec4(0, 1, 0, -1000000));
 
 
@@ -1259,7 +1290,7 @@ void My_Display()
 	//glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
 	glDrawBuffer( GL_COLOR_ATTACHMENT0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	drawOBJ(scene, mvp, M, vec4(0, 1, 0, -water_height));
+	drawOBJ(scene, mvp, M, water_viewMatrix ,vec4(0, 1, 0, -water_height));
 	//drawOBJ(scene, mvp, M, vec4(0, 0, 0, 1000000), 0);
 	mpitch = -mpitch;
 	eyeVector.y -= camera_distance;
@@ -1274,7 +1305,7 @@ void My_Display()
 	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
 	glDrawBuffer( GL_COLOR_ATTACHMENT0);
 	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	drawOBJ(scene, mvp, M, vec4(0, 0, 0, 1000000));
+	drawOBJ(scene, mvp, M, viewMatrix, vec4(0, 0, 0, 1000000));
 
 	// draw terrian
 	M = mat4();
@@ -1323,7 +1354,17 @@ void My_Display()
 	if(gameMode == START_MENU)
 	{
 		gameUI.DrawMenu();
+	}
+	else if(gameMode == GAME_MODE)
+	{
+		if(gameUI.setPress) gameUI.DrawSettingList();
+		gameUI.DrawMode();
 
+	}
+	else if(gameMode == VIEW_MODE)
+	{
+		if(gameUI.setPress) gameUI.DrawSettingList();
+		gameUI.DrawMode();
 	}
 
 	player.draw();
@@ -1429,10 +1470,33 @@ void My_Mouse(int button, int state, int x, int y)
 		mouseY = y;
 		if(x<=cmp_bar+10 && x>=cmp_bar-10)
 			pressCmpBar = true;
+
 		if(gameMode == START_MENU)
 		{
+			gameUI.mapPress = 0;
+			gameUI.setPress = 0;
 			if(x>=350 && x<=650 && y>=500 && y<=600) gameMode = GAME_MODE;
 			else if(x>=350 && x<=650 && y>=625 && y<=720) gameMode = VIEW_MODE;
+		}
+		else if(gameMode == GAME_MODE || gameMode == VIEW_MODE)
+		{
+			if((pow((x-62.5),2) + pow((y-812.5),2)) <= 1407) gameMode = START_MENU; //START MENU
+			else if((pow((x-162.5),2) + pow((y-812.5),2)) <= 1407){ //MAP
+				gameUI.mapPress = 1 - gameUI.mapPress;
+				gameUI.setPress = 0;
+			}
+			else if((pow((x-262.5),2) + pow((y-812.5),2)) <= 1407){ //SETTINGS
+				gameUI.mapPress = 0;
+				gameUI.setPress = 1 - gameUI.setPress;
+			}
+			else if(gameUI.setPress && (x>325 || y<300)){ //SETING LIST
+				gameUI.mapPress = 0;
+				gameUI.setPress = 0;
+			}
+			else{ //DEBUG
+				//gameUI.mapPress = 0;
+				//gameUI.setPress = 0;
+			}
 		}
 		/*else{
 			gameMode = START_MENU;
