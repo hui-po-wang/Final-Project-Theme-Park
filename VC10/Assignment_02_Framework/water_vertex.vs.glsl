@@ -18,8 +18,8 @@ const float tiling = 3.0;
 void main()
 {
 	vec4 worldPosition = model_matrix * vec4(iv3vertex, 1.0);
-	clipSpace = mvp * vec4(iv3vertex, 1.0);
-	gl_Position = clipSpace;
+	clipSpace = proj_matrix * view_matrix * model_matrix * vec4(iv3vertex, 1.0);
+	gl_Position = mvp * vec4(iv3vertex, 1.0);
 	texCoord = vec2(iv3vertex.x/2.0+0.5, iv3vertex.z/2.0+0.5) /* tiling*/;
 	toCameraVector = cameraPosition - worldPosition.xyz;
 }

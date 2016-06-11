@@ -42,7 +42,7 @@ GLint cmp_bar = 300;
 GLuint um4img_size, um4cmp_bar, um4control_signal, um4mouse_position;
 GLuint program, floor_program;
 
-GLfloat mroll = radians(0.0f), mpitch = radians(-11.0f), myaw = radians(300.0f);
+GLfloat mroll = radians(0.0f), mpitch = radians(-16.7f), myaw = radians(300.5f);
 
 vec3 eyeVector = vec3(-100, -100, 0);
 mat4 viewMatrix, water_viewMatrix;
@@ -896,11 +896,14 @@ class Player{
 		// 0 for standing, 1 for walking, and 2 for attacking
 		FbxOBJ playerAnimation[3];
 		int animationState;
+		mat4 model_matrix;
 		void loadContent(){
 			loadFBX(playerAnimation[0], "Pokemon/trainerStand.fbx");
 			loadFBX(playerAnimation[1], "Pokemon/trainer3.fbx");
 			loadFBX(playerAnimation[2], "Pokemon/trainerThrow1.fbx");
 			animationState = 1;
+
+			this->model_matrix = translate(mat4(),vec3(-80,50,-180))*scale(mat4(),vec3(4.0f,8.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));
 		}
 		void updateContent(){
 			std::vector<tinyobj::shape_t> new_shapes;
@@ -923,13 +926,12 @@ class Player{
 				// 4. Update Uniform Values by glUniform*
 				// 5. glDrawElements Call
 				glBindVertexArray (this->playerAnimation[animationState].scene.shapes[i].vao);
-				mat4 M = translate(mat4(),vec3(-120+eyeVector.x,50-eyeVector.y,0+eyeVector.z))*scale(mat4(),vec3(4.0f,4.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));
 				mat4 mvp1 =perspective(radians(60.0f), 1.0f,0.3f, 10000.0f)*
 					viewMatrix *
-					M ;
+					this->model_matrix ;
 				
 				glUniformMatrix4fv(glGetUniformLocation(program, "um4mvp"), 1, GL_FALSE, value_ptr(mvp1));
-				glUniformMatrix4fv(glGetUniformLocation(program, "M"), 1, GL_FALSE, value_ptr(M));
+				glUniformMatrix4fv(glGetUniformLocation(program, "M"), 1, GL_FALSE, value_ptr(this->model_matrix));
 
 				glBindTexture(GL_TEXTURE_2D,this->playerAnimation[animationState].scene.material_ids[this->playerAnimation[animationState].scene.shapes[i].mid]);
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->playerAnimation[animationState].scene.shapes[i].iBuffer);
@@ -975,7 +977,8 @@ void updateView()
 	mat4 trans = mat4(1.0f);
 	trans = translate(trans, eyeVector);
 	skybox_viewMatrix = matPitch*matYaw * translate(mat4(1.0), vec3(eyeVector.x, eyeVector.y, eyeVector.z));
-	water_viewMatrix = matPitch*matYaw * translate(mat4(1.0), vec3(eyeVector.x, eyeVector.y, eyeVector.z));
+	float angle = -2.5f ;
+	water_viewMatrix = matPitch/*rotate(mat4(), radians(angle)+mpitch, vec3(1.0f,0.0f,0.0f))*/ * matYaw * translate(mat4(1.0), vec3(eyeVector.x, eyeVector.y, eyeVector.z));
 	viewMatrix = rot *  trans;
 }
 void My_Init()
@@ -1212,13 +1215,13 @@ void My_Display()
 	glUseProgram(program);
 	//draw water refraction
 	glEnable(GL_CLIP_DISTANCE0);
-	float const water_height = 50;
+	float const water_height = 40;
 	float camera_distance = 2*fabs(eyeVector.y - (water_height));
 
 	updateView();
 	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
 	mvp = P*
-	water_viewMatrix *
+	viewMatrix *
 	M;
 	glBindFramebuffer( GL_DRAW_FRAMEBUFFER,waterRendering.refractionFbo);
 	//glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
@@ -1230,7 +1233,7 @@ void My_Display()
 
 	// draw water reflection
 	eyeVector.y += camera_distance;
-	//eyeVector.y = -eyeVector.y;
+	mpitch = -mpitch;
 	updateView();
 	glUseProgram(program);
 	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
@@ -1243,7 +1246,7 @@ void My_Display()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	drawOBJ(scene, mvp, M, vec4(0, 1, 0, -water_height));
 	//drawOBJ(scene, mvp, M, vec4(0, 0, 0, 1000000), 0);
-	//eyeVector.y = -eyeVector.y;
+	mpitch = -mpitch;
 	eyeVector.y -= camera_distance;
 	updateView();
 
@@ -1294,10 +1297,9 @@ void My_Display()
 		waterRendering.moveFactor += 0.0003 * f * 0.001f;
 	}
 
-	mat4 water_view_matrix = lookAt(eyeVector, vec3(0, 0, 0), vec3(0, 1, 0));
 	glUniformMatrix4fv(glGetUniformLocation(waterRendering.program, "mvp"), 1, GL_FALSE, value_ptr(mvp));
 	glUniformMatrix4fv(glGetUniformLocation(waterRendering.program, "model_matrix"), 1, GL_FALSE, value_ptr(M));
-	glUniformMatrix4fv(glGetUniformLocation(waterRendering.program, "view_matrix"), 1, GL_FALSE, value_ptr(water_view_matrix));
+	glUniformMatrix4fv(glGetUniformLocation(waterRendering.program, "view_matrix"), 1, GL_FALSE, value_ptr(water_viewMatrix));
 	glUniformMatrix4fv(glGetUniformLocation(waterRendering.program, "proj_matrix"), 1, GL_FALSE, value_ptr(P));
 	glUniform3fv(glGetUniformLocation(waterRendering.program, "cameraPosition"), 1, &eyeVector[0]);
 	glUniform1f(glGetUniformLocation(waterRendering.program, "moveFactor"), waterRendering.moveFactor);

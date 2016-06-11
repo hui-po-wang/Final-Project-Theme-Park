@@ -35,3 +35,5 @@
 
 **6/11**
 - create player class
+- 修好water reflection
+- 調整一下開始畫面
