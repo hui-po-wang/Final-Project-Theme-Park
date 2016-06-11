@@ -44,9 +44,9 @@ GLuint program, floor_program;
 
 GLfloat mroll = radians(0.0f), mpitch = radians(-16.7f), myaw = radians(300.5f);
 
-vec3 eyeVector = vec3(-100, -100, 0);
 mat4 viewMatrix, water_viewMatrix;
 mat4 skybox_viewMatrix;
+vec3 eyeVector = vec3(-100, -100, 0); 
 int animation_flag = 0;
 
 GLfloat mPos[2];
@@ -891,6 +891,15 @@ class GameUI{
 
 };
 GameUI gameUI;
+class Camera{
+	// 0 for free, 1 for 3-rd person camera
+	int camera_type;
+	vec3 eyeVector;
+	Camera(){
+		eyeVector = vec3(-100, -100, 0); 
+	};
+};
+Camera camera;
 class Player{
 	public:
 		// 0 for standing, 1 for walking, and 2 for attacking
@@ -903,7 +912,7 @@ class Player{
 			loadFBX(playerAnimation[2], "Pokemon/trainerThrow1.fbx");
 			animationState = 1;
 
-			this->model_matrix = translate(mat4(),vec3(-80,50,-180))*scale(mat4(),vec3(4.0f,8.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));
+			this->model_matrix = translate(mat4(),vec3(-800,50,-180))*scale(mat4(),vec3(4.0f,8.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));
 		}
 		void updateContent(){
 			std::vector<tinyobj::shape_t> new_shapes;
@@ -937,6 +946,12 @@ class Player{
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->playerAnimation[animationState].scene.shapes[i].iBuffer);
 				glDrawElements(GL_TRIANGLES, this->playerAnimation[animationState].scene.shapes[i].iBuffer_elements, GL_UNSIGNED_INT, 0);
 			}
+		}
+		void ready(){
+			this->model_matrix = translate(mat4(),vec3(-80,50,-180))*scale(mat4(),vec3(4.0f,8.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));
+		}
+		void start(){
+			this->model_matrix = translate(mat4(),vec3(-80,50,-180))*scale(mat4(),vec3(4.0f,8.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));
 		}
 
 };
