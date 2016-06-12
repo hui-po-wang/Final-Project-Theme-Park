@@ -61,6 +61,7 @@ float getDegree(float rad){
 bool trigger_lighting = true;
 bool trigger_fog = true;
 bool trigger_shadow = true;
+bool trigger_sampling = true;
 
 GLfloat mPos[2];
 typedef struct _texture_data
@@ -1491,6 +1492,7 @@ void drawOBJ(GLuint programForDraw, Scene& scene, mat4& mvp, mat4& M, mat4& V, m
 		glUniform1i(glGetUniformLocation(programForDraw, "trigger_lighting"), isLighting);
 		glUniform1i(glGetUniformLocation(programForDraw, "trigger_fog"), isFog);
 		glUniform1i(glGetUniformLocation(programForDraw, "trigger_shadow"), isShadow);
+		glUniform1i(glGetUniformLocation(programForDraw, "trigger_sampling"), trigger_sampling);
 
 		// abandoned codes which used to draw scnens with only material_ids[0]
 		/*glBindTexture(GL_TEXTURE_2D,scene.material_ids[scene.shapes[i].mid]);
@@ -1648,9 +1650,9 @@ void My_Display()
 		player.draw(0);
 		drawOBJ(shadow.program, scene, light_vp_matrix * M, M, light_view_matrix, light_proj_matrix, vec4(0, 0, 0, 1000000), trigger_lighting, 0, 0);
 		glDisable(GL_POLYGON_OFFSET_FILL);
-	
+		glCullFace(GL_BACK);
+
 	// draw city
-	glCullFace(GL_BACK);
 	glUseProgram(program);
 	glViewport( 0, 0, window_width, window_height);
 	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
@@ -2098,6 +2100,10 @@ void My_SpecialKeys(int key, int x, int y)
 	case GLUT_KEY_F3:
 		//printf("F1 is pressed at (%d, %d)\n", x, y);
 		trigger_shadow = !trigger_shadow;
+		break;
+	case GLUT_KEY_F4:
+		//printf("F1 is pressed at (%d, %d)\n", x, y);
+		trigger_sampling = !trigger_sampling;
 		break;
 	case GLUT_KEY_PAGE_UP:
 		printf("Page up is pressed at (%d, %d)\n", x, y);

@@ -14,28 +14,14 @@ uniform vec4 plane;
 uniform int trigger_lighting;
 uniform int trigger_fog;
 uniform int trigger_shadow;
+uniform int trigger_sampling;
 
 uniform mat4 M;
 uniform mat4 V;
 uniform mat4 P;
 
 layout(location = 0) out vec4 fragColor;
-float ShadowCalculation()
-{
-    // perform perspective divide
-    vec3 projCoords = shadow_coord.xyz / shadow_coord.w;
-    // Transform to [0,1] range
-    projCoords = projCoords * 0.5 + 0.5;
-    // Get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-    float closestDepth = texture(shadow_tex, projCoords.xy).r; 
-	//float closestDepth = textureProj(shadow_tex, vec4(projCoords,1.0));
-    // Get depth of current fragment from light's perspective
-    float currentDepth = projCoords.z;
-    // Check whether current frag pos is in shadow
-    float shadow = currentDepth > closestDepth  ? 1.0 : 0.0;
 
-    return shadow;
-} 
 vec4 lighting(){
 	// lighting constant
 	mat4 model_view = V * M;
@@ -64,13 +50,28 @@ vec4 lighting(){
 	vec3 specular = specularCoefficient * vec3(1, 1, 1) * vec3(0.3, 0.3, 0.3);
 	
 	if(trigger_shadow == 1){
+		vec2 poissonDisk[4] = vec2[](
+			vec2( -0.94201624, -0.39906216 ),
+			vec2( 0.94558609, -0.76890725 ),
+			vec2( -0.094184101, -0.92938870 ),
+			vec2( 0.34495938, 0.29387760 )
+		);
 		float bias = 0.1;
 		float dt = 1.0f;
-		if(texture(shadow_tex, shadow_coord.xy/shadow_coord.w).r < shadow_coord.z/shadow_coord.w - bias){
-			dt = 0.0f;
+		if(trigger_sampling == 0){
+			if(texture(shadow_tex, shadow_coord.xy/shadow_coord.w).r < shadow_coord.z/shadow_coord.w - bias){
+				dt = 0.0f;
+			}
+		}
+		else{
+			for (int i=0;i<4;i++){
+			  if ( texture( shadow_tex, shadow_coord.xy/shadow_coord.w + poissonDisk[i]/200.0 ).z  <  shadow_coord.z/shadow_coord.w - bias ){
+				dt-=0.2 ;
+			  }
+			}
 		}
 
-		if(dt == 0){
+		if(dt < 1){
 			resultLighting += vec4(ambient -vec3(0.2, 0.2, 0.2) +  dt * attenuation*(diffuse + specular),0);
 		}
 		else{
