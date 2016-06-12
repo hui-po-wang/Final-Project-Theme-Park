@@ -21,9 +21,13 @@
 #define MENU_ANI_WALK 5
 #define MENU_ANI_FURY 6
 #define SHADOW_MAP_SIZE 4096
+//***
+#define STAND 1
+#define FACE_DOWN 2
+#define POKEMON_NUM 12
 
-const int window_width = 1000;
-const int window_height = 1000;
+const int window_width = 600;
+const int window_height = 600;
 
 GLubyte timer_cnt = 0;
 bool timer_enabled = true;
@@ -37,6 +41,7 @@ float mouseX;
 float mouseY;
 
 mat4 mvp;
+mat4 viewMatrix_view;
 GLint um4mvp;
 GLint control_signal = 0;
 GLint cmp_bar = 300;
@@ -49,6 +54,7 @@ mat4 viewMatrix, water_viewMatrix;
 mat4 skybox_viewMatrix;
 vec3 eyeVector = vec3(830.2f, -642.0f, -445.01f);
 //vec3 eyeVector = vec3(-100, -100, 0); 
+int pokemon_bag[13];
 int animation_flag;
 float getDegree(float rad){
 	return rad*(180.0f / 3.141592653589f);
@@ -222,7 +228,7 @@ class SkyBox{
 
 			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 		}
-		void draw(mat4 mvp){
+		void draw(mat4 &mvp){
 
 			glUseProgram(this->program);
 			glBindVertexArray(this->vao);
@@ -831,13 +837,366 @@ class SecondFrame{
 		GLuint fboDataTexture;
 };
 SecondFrame secondFrame;
+class Player{
+	public:
+		// 0 for standing, 1 for walking, and 2 for attacking
+		FbxOBJ playerAnimation[3];
+		int animationState;
+		mat4 model_matrix;
+		mat4 proj_matrix;
+		//t_position for transform 
+		vec3 t_position ;
+		//position for player actual position
+		vec3 position ;
+		//turn for turn right , left , back
+		float turn;
+		char *name;
+		int id;
+		vec3 scale_v;
+		bool isShow;
+		int rotateType; //1->stand, 2->face down
+		void loadContent(){
+			this->rotateType = FACE_DOWN;
+			loadFBX(playerAnimation[0], "Pokemon/trainerStand.fbx");
+			loadFBX(playerAnimation[1], "Pokemon/trainer3.fbx");
+			loadFBX(playerAnimation[2], "Pokemon/trainerThrow1.fbx");
+			this->animationState = 1;
+
+			//this->position = vec3(800, -115.0f, 253.04);
+			//this->t_position = vec3(-800, 50, -180);
+
+			this->position = vec3(890, -115.0f, 463.04);
+			this->t_position = vec3(-890, 50, -390);
+
+			this->turn = 0.0f;
+
+			this->id = 0;
+			this->isShow = true;
+			this->scale_v = vec3(4.0f, 4.0f, 4.0f);
+
+			//this->model_matrix = translate(mat4(),vec3(-800,50,-180))*scale(mat4(),vec3(4.0f,8.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));
+			this->model_matrix = translate(mat4(), t_position)
+				*scale(mat4(), scale_v)
+				*rotate(mat4(), radians(180.0f), vec3(0, 0, 1))
+				*rotate(mat4(), radians(-90.0f), vec3(1, 0, 0));
+
+
+			this->proj_matrix = perspective(radians(60.0f), 1.0f, 0.3f, 10000.0f);
+		}
+		void loadContent(char* name, int id, char* path, vec3 position, vec3 t_position, vec3 scale_v, int rotateType){
+			this->name = name;
+
+			loadFBX(playerAnimation[0], path);
+			this->animationState = 0;
+
+
+			this->t_position = vec3(-800, 50, -180);
+			this->position = vec3(800, /*-283.13f*/ -115.0f, 253.04);
+			this->turn = 0.0f;
+			this->position = position;
+			this->t_position = t_position;
+
+
+
+			this->id = id;
+			this->isShow = true;
+			this->scale_v = scale_v;
+			this->rotateType = rotateType;
+			if (this->id == 6){
+				this->model_matrix = translate(mat4(), t_position)
+					*scale(mat4(), scale_v)
+					//*rotate(mat4(), radians(180.0f), vec3(0, 0, 1))
+					*rotate(mat4(), radians(-90.0f), vec3(1, 0, 0));
+				//*rotate(mat4(), radians(180.0f), vec3(0, 1, 0));
+			}
+			if (this->id == 11){
+				this->model_matrix = translate(mat4(), t_position)
+					*scale(mat4(), scale_v)
+					*rotate(mat4(), radians(180.0f), vec3(0, 0, 1))
+					*rotate(mat4(), radians(90.0f), vec3(1, 0, 0));
+			}
+			else if (this->rotateType == STAND)				//stand
+				this->model_matrix = translate(mat4(), t_position)
+				*scale(mat4(), scale_v)
+				*rotate(mat4(), radians(180.0f), vec3(0, 0, 1))
+				*rotate(mat4(), radians(180.0f), vec3(1, 0, 0));
+
+			else if (this->rotateType == FACE_DOWN)			//face down
+				this->model_matrix = translate(mat4(), t_position)
+				*scale(mat4(), scale_v)
+				*rotate(mat4(), radians(180.0f), vec3(0, 0, 1))
+				*rotate(mat4(), radians(-90.0f), vec3(1, 0, 0));
+
+			this->proj_matrix = perspective(radians(60.0f), 1.0f, 0.3f, 10000.0f);
+		}
+
+		void updatePosition(vec3 dv, float angle){
+			position -= dv;
+			this->t_position += dv;
+			this->turn = angle;
+			if (this->id == 0){
+				this->model_matrix = translate(mat4(), t_position)
+					*scale(mat4(), scale_v)
+					*rotate(mat4(), radians(180.0f), vec3(0, 0, 1))
+					*rotate(mat4(), radians(-90.0f), vec3(1, 0, 0))
+					*rotate(mat4(), radians(angle), vec3(0, 0, 1));
+			}
+			else if (this->rotateType == STAND)				//stand
+				this->model_matrix = translate(mat4(), t_position)
+				*scale(mat4(), scale_v)
+				*rotate(mat4(), radians(180.0f), vec3(0, 0, 1))
+				*rotate(mat4(), radians(180.0f), vec3(1, 0, 0));
+
+			else if (this->rotateType == FACE_DOWN)			//face down
+				this->model_matrix = translate(mat4(), t_position)
+				*scale(mat4(), scale_v)
+				*rotate(mat4(), radians(180.0f), vec3(0, 0, 1))
+				*rotate(mat4(), radians(-90.0f), vec3(1, 0, 0));
+
+		}
+		void updateContent(){
+			std::vector<tinyobj::shape_t> new_shapes;
+			float timer = ( (float) timer_cnt/255.0f);
+			GetFbxAnimation(this->playerAnimation[animationState].myFbx, new_shapes, timer); // The Last Parameter is A Float in [0, 1], Specifying The Animation Location You Want to Retrieve
+			for(int i = 0; i < new_shapes.size(); i++)
+			{
+				glBindVertexArray (this->playerAnimation[animationState].scene.shapes[i].vao);
+				glBindBuffer(GL_ARRAY_BUFFER, this->playerAnimation[animationState].scene.shapes[i].buffers[0]);
+				glBufferData(GL_ARRAY_BUFFER, new_shapes[i].mesh.positions.size() * sizeof(float), 
+							&new_shapes[i].mesh.positions[0], GL_STATIC_DRAW);
+			}
+		}
+		void draw(bool isLighting){
+			
+			glActiveTexture(GL_TEXTURE0);
+			for(int i=0;i<this->playerAnimation[animationState].scene.shapeCount;i++){
+				// 1. Bind The VAO of the Shape
+				// 3. Bind Textures
+				// 4. Update Uniform Values by glUniform*
+				// 5. glDrawElements Call
+				glBindVertexArray (this->playerAnimation[animationState].scene.shapes[i].vao);
+				mat4 mvp1 = proj_matrix *
+					viewMatrix *
+					//****************************
+					this->model_matrix;
+
+
+
+				glUniformMatrix4fv(glGetUniformLocation(program, "um4mvp"), 1, GL_FALSE, value_ptr(mvp1));
+				glUniformMatrix4fv(glGetUniformLocation(program, "M"), 1, GL_FALSE, value_ptr(this->model_matrix));
+				glUniformMatrix4fv(glGetUniformLocation(program, "V"), 1, GL_FALSE, value_ptr(viewMatrix));
+				glUniformMatrix4fv(glGetUniformLocation(program, "P"), 1, GL_FALSE, value_ptr(this->proj_matrix));
+				glUniform1i(glGetUniformLocation(program, "trigger_lighting"), isLighting);
+				glUniform1i(glGetUniformLocation(program, "trigger_shadow"), trigger_shadow);
+
+				glBindTexture(GL_TEXTURE_2D,this->playerAnimation[animationState].scene.material_ids[this->playerAnimation[animationState].scene.shapes[i].mid]);
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->playerAnimation[animationState].scene.shapes[i].iBuffer);
+				glDrawElements(GL_TRIANGLES, this->playerAnimation[animationState].scene.shapes[i].iBuffer_elements, GL_UNSIGNED_INT, 0);
+			}
+		}
+		void ready(){
+			this->model_matrix = translate(mat4(),vec3(-80,50,-180))*scale(mat4(),vec3(4.0f,8.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));
+		}
+		void start(){
+			this->model_matrix = translate(mat4(),vec3(-80,50,-180))*scale(mat4(),vec3(4.0f,8.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));
+		}
+		vec3 getPosition(){
+			return position;
+		}
+		void gotCaught(){
+			puts("-------------------------------");
+			puts("GOTTTTTTTTTTTTTTTTTTTTTTTTTT");
+			printf("id:   %d", this->id);
+			puts("GOTTTTTTTTTTTTTTTTTTTTTTTTTT");
+			puts("-------------------------------");
+
+			pokemon_bag[id] = 1;
+			isShow = false;
+		}
+		void released(vec3 position, vec3 t_position){
+			this->isShow = true;
+			this->position = position;
+			this->t_position = position;
+		}
+
+};
+Player player;
+Player pokemon[POKEMON_NUM + 1];
+void catch_pokemon(){
+
+
+	player.animationState = 2;
+	float min = 1e9;
+	int min_id = -1;
+	for (int i = 1; i <= POKEMON_NUM; i++){
+		vec3 distance_v = pokemon[i].position - player.position;
+		float x = distance_v.x; float y = distance_v.y; float z = distance_v.z;
+		float distance = sqrt(x*x + z*z);
+
+
+		if (distance < 200){
+			if (distance < min){
+				min_id = i;
+				min = distance;
+			}
+		}
+	}
+
+	if (min_id > 0){
+		pokemon[min_id].gotCaught();
+		puts("---------------------------------------");
+		printf("player: %f, %f   v.s.\npika %f, %f\n", player.position.x, player.position.z, pokemon[min_id].position.x, pokemon[min_id].position.z);
+		printf(" distance:%f \n", min);
+		puts("---------------------------------------");
+	}
+
+	//updateView();
+
+}
+void release_pokemon(int id){
+	if (id == -1){
+		for (int i = 1; i <= POKEMON_NUM; i++){
+			if (pokemon_bag[i] == 1){
+				pokemon_bag[i] = 0;
+				pokemon[i].released(player.position + vec3(20, 0, 20), player.t_position - vec3(20, 0, 20));
+				return;
+			}
+		}
+	}
+	else if (pokemon_bag[id] == 1){
+		pokemon_bag[id] = 0;
+		pokemon[id].released(player.position + vec3(20, 0, 20), player.t_position - vec3(20, 0, 20));
+	}
+	//	updateView();
+}
+
+class Camera{
+public:
+	float distanceFromPlayer;
+	float angleAroundPlayer;
+	vec3 position;
+	float pitch;
+	float yaw;
+	float roll;
+	Player* player;
+	int  mode3D; // 3 -> 3rd person perspective,    1 -> 1st person perspective
+	Camera(Player *player, vec3 position){
+		this->player = player;
+		this->position = position;
+
+		// initialize
+		this->distanceFromPlayer = 500;
+		this->angleAroundPlayer = 0;
+
+		this->pitch = 2.205892f;
+		this->yaw = 385.87f;
+		this->roll = 0.0f;
+		this->mode3D = 3;
+	}
+	int getMod3D(){
+		return this->mode3D;
+	}
+	void updateCamera(vec3 position, float roll, float yaw, float pitch){
+		this->position = position;
+		this->roll = roll;
+		this->pitch = pitch;
+		this->yaw = yaw;
+	}
+	vec3 getPosition(){
+		return position;
+	}
+	float getPitch(){
+		return pitch;
+	}
+	float getRoll(){
+		return roll;
+	}
+	float getYaw(){
+		return yaw;
+	}
+	void setPlayer(Player *player){
+		this->player = player;
+	}
+
+	void move(){
+		float horizontalDistance = calculateHorizontalDistance();
+		float verticalDistance = calculateVerticalDistance();
+		calculateCameraPosition(horizontalDistance, verticalDistance);
+	}
+	void calculateCameraPosition(float horizontalDistance, float verticalDistance){
+		//float theta = player.getRotY() + angleAroundPlayer;
+		float theta = angleAroundPlayer;//+ player->turn;
+		float offsetX = (float)(horizontalDistance * sin(radians(theta)));
+		float offsetZ = (float)(horizontalDistance * cos(radians(theta)));
+
+		if (mode3D == 3){
+			position.x = player->position.x - offsetX;//+40;
+			position.z = player->position.z - offsetZ;//+ 700.0f;
+			printf("^^^offsetX:%.5f, offsetZ:%.5f, vertiD:%f\n", offsetX, offsetZ, verticalDistance);
+			position.y = player->position.y - verticalDistance;
+			printf("---------------------\n[1]player.position:(%f, %f, %f)\n", player->position.x, player->position.y, player->position.z);
+			printf("---------------------\n[1]camera.position:(%f, %f, %f)\n", position.x, position.y, position.z);
+		}
+		else if (mode3D == 1){
+			position.x = player->position.x;
+			position.z = player->position.z;// + 20.0f;
+			position.y = player->position.y;
+
+
+
+			angleAroundPlayer = -player->turn;
+			yaw = player->turn;
+
+			printf("---------------------\n[2]player.position:(%f, %f, %f)\n", player->position.x, player->position.y, player->position.z);
+			printf("---------------------\n[2]player.yaw:%f, pitch: %f, angle:%f\n", this->yaw, this->pitch, this->angleAroundPlayer);
+
+		}
+	}
+
+	void setZoom(float zoomLevel){
+		if (distanceFromPlayer > 1000.0f && zoomLevel > 0)
+			return;
+		distanceFromPlayer += zoomLevel;
+		move();
+	}
+	void setPitch(float pitchChange){
+		pitch += pitchChange;
+		printf("--in camera.setPitch: pitch:%f\n", pitch);
+		//move(playerx, playery, playerz+0.1*(pitchChange>0.0f)?1:-1);
+
+		if (pitchChange > 0){
+			move();
+		}
+		else {
+			move();
+		}
+
+	}
+	void setYaw(float yawChange){
+		yaw += yawChange;
+		angleAroundPlayer -= yawChange;
+		printf("--in camera.setYawn: yaw:%f\n", yaw);
+	}
+	void calculateAngleAroundPlayer(float angleChange){
+		angleAroundPlayer += angleChange;
+	}
+	float calculateHorizontalDistance(){
+		return (float)(distanceFromPlayer * cos(radians(pitch)));
+		printf("in set hori--in camera.setPitch: pitch:%f\n", pitch);
+	}
+	float calculateVerticalDistance(){
+		return (float)(distanceFromPlayer * sin(radians(pitch)));
+	}
+};
+Camera camera(&player, eyeVector);
+
 enum Mode{START_MENU,GAME_MODE,VIEW_MODE};
 Mode gameMode;
 class GameUI{
 	public:
 		GLuint vao;
 		GLuint vbo;
-		GLuint tex[10];
+		GLuint tex[40];
 		GLuint program;
 		GLuint mapPress;
 		GLuint setPress;
@@ -881,8 +1240,117 @@ class GameUI{
 				-0.44f*window_height/window_width,-0.95f,1.0f,0.0f,
 				-0.59f*window_height/window_width,-0.95f,0.0f,0.0f,
 				-0.59f*window_height/window_width,-0.8f,0.0f,1.0f,
-				-0.44f*window_height/window_width,-0.8f,1.0f,1.0f
-
+				-0.44f*window_height/window_width,-0.8f,1.0f,1.0f,
+				//TERRAIN ENABLE/DISABLE
+				-0.4f*window_height/window_width,0.04f,1.0f,0.0f,
+				-0.55f*window_height/window_width,0.04f,0.0f,0.0f,
+				-0.55f*window_height/window_width,0.1f,0.0f,1.0f,
+				-0.4f*window_height/window_width,0.1f,1.0f,1.0f,
+				//TERRAIN PLUS
+				-0.49f*window_height/window_width,-0.068f,1.0f,0.0f,
+				-0.55f*window_height/window_width,-0.068f,0.0f,0.0f,
+				-0.55f*window_height/window_width,-0.008f,0.0f,1.0f,
+				-0.49f*window_height/window_width,-0.008f,1.0f,1.0f,
+				//TERRAIN MINUS
+				-0.4f*window_height/window_width,-0.068f,1.0f,0.0f,
+				-0.46f*window_height/window_width,-0.068f,0.0f,0.0f,
+				-0.46f*window_height/window_width,-0.008f,0.0f,1.0f,
+				-0.4f*window_height/window_width,-0.008f,1.0f,1.0f,
+				//AUTO ROUTING ENABLE/DISABLE
+				-0.4f*window_height/window_width,-0.176f,1.0f,0.0f,
+				-0.55f*window_height/window_width,-0.176f,0.0f,0.0f,
+				-0.55f*window_height/window_width,-0.116f,0.0f,1.0f,
+				-0.4f*window_height/window_width,-0.116f,1.0f,1.0f,
+				//LIGHTING ENABLE/DISABLE
+				-0.4f*window_height/window_width,-0.284f,1.0f,0.0f,
+				-0.55f*window_height/window_width,-0.284f,0.0f,0.0f,
+				-0.55f*window_height/window_width,-0.224f,0.0f,1.0f,
+				-0.4f*window_height/window_width,-0.224f,1.0f,1.0f,
+				//SHADOW ENABLE/DISABLE
+				-0.4f*window_height/window_width,-0.402f,1.0f,0.0f,
+				-0.55f*window_height/window_width,-0.402f,0.0f,0.0f,
+				-0.55f*window_height/window_width,-0.342f,0.0f,1.0f,
+				-0.4f*window_height/window_width,-0.342f,1.0f,1.0f,
+				//FOG ENABLE/DISABLE
+				-0.4f*window_height/window_width,-0.51f,1.0f,0.0f,
+				-0.55f*window_height/window_width,-0.51f,0.0f,0.0f,
+				-0.55f*window_height/window_width,-0.45f,0.0f,1.0f,
+				-0.4f*window_height/window_width,-0.45f,1.0f,1.0f,
+				//FIRST PERSPECTIVE ENABLE/DISABLE
+				-0.49f*window_height/window_width,-0.618f,1.0f,0.0f,
+				-0.55f*window_height/window_width,-0.618f,0.0f,0.0f,
+				-0.55f*window_height/window_width,-0.558f,0.0f,1.0f,
+				-0.49f*window_height/window_width,-0.558f,1.0f,1.0f,
+				//THIRD PERSPECTIVE ENABLE/DISABLE
+				-0.4f*window_height/window_width,-0.618f,1.0f,0.0f,
+				-0.46f*window_height/window_width,-0.618f,0.0f,0.0f,
+				-0.46f*window_height/window_width,-0.558f,0.0f,1.0f,
+				-0.4f*window_height/window_width,-0.558f,1.0f,1.0f,
+				//LIST BG
+				1.0f*window_height/window_width,-0.75f,1.0f,0.0f,
+				-1.0f*window_height/window_width,-0.75f,0.0f,0.0f,
+				-1.0f*window_height/window_width,0.75f,0.0f,1.0f,
+				1.0f*window_height/window_width,0.75f,1.0f,1.0f,
+				//LIST 001
+				-0.57f*window_height/window_width,0.19f,1.0f,0.0f,
+				-0.85f*window_height/window_width,0.19f,0.0f,0.0f,
+				-0.85f*window_height/window_width,0.47f,0.0f,1.0f,
+				-0.57f*window_height/window_width,0.47f,1.0f,1.0f,
+				//LIST 002
+				-0.17f*window_height/window_width,0.19f,1.0f,0.0f,
+				-0.45f*window_height/window_width,0.19f,0.0f,0.0f,
+				-0.45f*window_height/window_width,0.47f,0.0f,1.0f,
+				-0.17f*window_height/window_width,0.47f,1.0f,1.0f,
+				//LIST 003
+				0.23f*window_height/window_width,0.19f,1.0f,0.0f,
+				-0.05f*window_height/window_width,0.19f,0.0f,0.0f,
+				-0.05f*window_height/window_width,0.47f,0.0f,1.0f,
+				0.23f*window_height/window_width,0.47f,1.0f,1.0f,
+				//LIST 004
+				0.63f*window_height/window_width,0.19f,1.0f,0.0f,
+				0.35f*window_height/window_width,0.19f,0.0f,0.0f,
+				0.35f*window_height/window_width,0.47f,0.0f,1.0f,
+				0.63f*window_height/window_width,0.47f,1.0f,1.0f,
+				//LIST 005
+				-0.57f*window_height/window_width,-0.21f,1.0f,0.0f,
+				-0.85f*window_height/window_width,-0.21f,0.0f,0.0f,
+				-0.85f*window_height/window_width,0.07f,0.0f,1.0f,
+				-0.57f*window_height/window_width,0.07f,1.0f,1.0f,
+				//LIST 006
+				-0.17f*window_height/window_width,-0.21f,1.0f,0.0f,
+				-0.45f*window_height/window_width,-0.21f,0.0f,0.0f,
+				-0.45f*window_height/window_width,0.07f,0.0f,1.0f,
+				-0.17f*window_height/window_width,0.07f,1.0f,1.0f,
+				//LIST 007
+				0.23f*window_height/window_width,-0.21f,1.0f,0.0f,
+				-0.05f*window_height/window_width,-0.21f,0.0f,0.0f,
+				-0.05f*window_height/window_width,0.07f,0.0f,1.0f,
+				0.23f*window_height/window_width,0.07f,1.0f,1.0f,
+				//LIST 008
+				0.63f*window_height/window_width,-0.21f,1.0f,0.0f,
+				0.35f*window_height/window_width,-0.21f,0.0f,0.0f,
+				0.35f*window_height/window_width,0.07f,0.0f,1.0f,
+				0.63f*window_height/window_width,0.07f,1.0f,1.0f,
+				//LIST 009
+				-0.57f*window_height/window_width,-0.61f,1.0f,0.0f,
+				-0.85f*window_height/window_width,-0.61f,0.0f,0.0f,
+				-0.85f*window_height/window_width,-0.33f,0.0f,1.0f,
+				-0.57f*window_height/window_width,-0.33f,1.0f,1.0f,
+				//LIST 010
+				-0.17f*window_height/window_width,-0.61f,1.0f,0.0f,
+				-0.45f*window_height/window_width,-0.61f,0.0f,0.0f,
+				-0.45f*window_height/window_width,-0.33f,0.0f,1.0f,
+				-0.17f*window_height/window_width,-0.33f,1.0f,1.0f,
+				//LIST 011
+				0.23f*window_height/window_width,-0.61f,1.0f,0.0f,
+				-0.05f*window_height/window_width,-0.61f,0.0f,0.0f,
+				-0.05f*window_height/window_width,-0.33f,0.0f,1.0f,
+				0.23f*window_height/window_width,-0.33f,1.0f,1.0f,
+				//LIST 012
+				0.63f*window_height/window_width,-0.61f,1.0f,0.0f,
+				0.35f*window_height/window_width,-0.61f,0.0f,0.0f,
+				0.35f*window_height/window_width,-0.33f,0.0f,1.0f,
+				0.63f*window_height/window_width,-0.33f,1.0f,1.0f,
 			};
 			/*const float vertices[] = {
 				-1,1,-1,-1,1,1,1,-1,1,1,1,-1
@@ -895,7 +1363,7 @@ class GameUI{
 			glEnableVertexAttribArray( 0 );
 			glEnableVertexAttribArray( 1 );
 
-			char filename[10][100];
+			char filename[40][100];
 			strcpy(filename[0], "GameUI/pokemonLogo.png");
 			strcpy(filename[1], "GameUI/gameMode.png");
 			strcpy(filename[2], "GameUI/viewMode.png");
@@ -903,9 +1371,41 @@ class GameUI{
 			strcpy(filename[4], "GameUI/home-icon2.png");
 			strcpy(filename[5], "GameUI/Book-icon.png");
 			strcpy(filename[6], "GameUI/settings.png");
+			strcpy(filename[7], "GameUI/switch_on.png");
+			strcpy(filename[8], "GameUI/switch_off.png");
+			strcpy(filename[9], "GameUI/plus2.png");
+			strcpy(filename[10], "GameUI/minus2.png");
+			strcpy(filename[11], "GameUI/one_off.png");
+			strcpy(filename[12], "GameUI/one_on.png");
+			strcpy(filename[13], "GameUI/three_off.png");
+			strcpy(filename[14], "GameUI/three_on.png");
+			strcpy(filename[15], "GameUI/paper.png");
+			strcpy(filename[16], "GameUI/001.png");
+			strcpy(filename[17], "GameUI/004.png");
+			strcpy(filename[18], "GameUI/007.png");
+			strcpy(filename[19], "GameUI/012.png");
+			strcpy(filename[20], "GameUI/017.png");
+			strcpy(filename[21], "GameUI/025.png");
+			strcpy(filename[22], "GameUI/039.png");
+			strcpy(filename[23], "GameUI/043.png");
+			strcpy(filename[24], "GameUI/051.png");
+			strcpy(filename[25], "GameUI/054.png");
+			strcpy(filename[26], "GameUI/143.png");
+			strcpy(filename[27], "GameUI/052.png");
+			strcpy(filename[28], "GameUI/001_g.png");
+			strcpy(filename[29], "GameUI/004_g.png");
+			strcpy(filename[30], "GameUI/007_g.png");
+			strcpy(filename[31], "GameUI/012_g.png");
+			strcpy(filename[32], "GameUI/017_g.png");
+			strcpy(filename[33], "GameUI/025_g.png");
+			strcpy(filename[34], "GameUI/039_g.png");
+			strcpy(filename[35], "GameUI/043_g.png");
+			strcpy(filename[36], "GameUI/051_g.png");
+			strcpy(filename[37], "GameUI/054_g.png");
+			strcpy(filename[38], "GameUI/143_g.png");
+			strcpy(filename[39], "GameUI/052_g.png");
 
-
-			for(int i=0;i<7;i++)
+			for(int i=0;i<40;i++)
 			{
 				glActiveTexture(GL_TEXTURE0);
 				glGenTextures(1, &this->tex[i]);
@@ -944,11 +1444,108 @@ class GameUI{
 		{
 			glUseProgram(this->program);
 			glBindVertexArray(this->vao);
-			for(int i=3;i<4;i++){
+			//Setting list
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, this->tex[3]);
+			glDrawArrays(GL_TRIANGLE_FAN,4*3,4);
+			//Terrain 
+			if(terrain.enable_displacement){
 				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, this->tex[i]);
-				glDrawArrays(GL_TRIANGLE_FAN,4*i,4);
+				glBindTexture(GL_TEXTURE_2D, this->tex[7]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*7,4);
 			}
+			else{
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->tex[8]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*7,4);
+			}
+			//Terrain plus
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, this->tex[9]);
+			glDrawArrays(GL_TRIANGLE_FAN,4*8,4);
+			//Terrain minus
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, this->tex[10]);
+			glDrawArrays(GL_TRIANGLE_FAN,4*9,4);
+			//Auto routing
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, this->tex[8]);
+			glDrawArrays(GL_TRIANGLE_FAN,4*10,4);
+			printf("light %d\n",trigger_lighting);
+			//Lighting
+			if(trigger_lighting){
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->tex[7]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*11,4);
+			}
+			else{
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->tex[8]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*11,4);
+			}
+			//Shadow
+			if(trigger_shadow){
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->tex[7]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*12,4);
+			}
+			else{
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->tex[8]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*12,4);
+			}
+			//Fog
+			if(trigger_fog){
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->tex[7]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*13,4);
+			}
+			else{
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->tex[8]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*13,4);
+			}
+			//First per off
+			if(camera.mode3D == 3){
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->tex[11]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*14,4);
+				//Third per on
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->tex[14]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*15,4);
+			}
+			//First per on
+			if(camera.mode3D == 1){
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->tex[12]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*14,4);
+				//Third per off
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->tex[13]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*15,4);
+			}
+		}
+		void DrawCatchList(){
+			glUseProgram(this->program);
+			glBindVertexArray(this->vao);
+			//List BG
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, this->tex[15]);
+			glDrawArrays(GL_TRIANGLE_FAN,4*16,4);
+			for(int i=16;i<29;i++){
+				if(pokemon_bag[i-15]){
+					glActiveTexture(GL_TEXTURE0);
+					glBindTexture(GL_TEXTURE_2D, this->tex[i]);
+					glDrawArrays(GL_TRIANGLE_FAN,4*(i+1),4);
+				}
+				else{
+					glActiveTexture(GL_TEXTURE0);
+					glBindTexture(GL_TEXTURE_2D, this->tex[i+12]);
+					glDrawArrays(GL_TRIANGLE_FAN,4*(i+1),4);
+				}
+			}
+
 		}
 
 };
@@ -1010,226 +1607,24 @@ class Shadow{
 };
 
 Shadow shadow;
-class Player{
-	public:
-		// 0 for standing, 1 for walking, and 2 for attacking
-		FbxOBJ playerAnimation[3];
-		int animationState;
-		mat4 model_matrix;
-		mat4 proj_matrix;
-		//t_position for transform 
-		vec3 t_position ;
-		//position for player actual position
-		vec3 position ;
-		//turn for turn right , left , back
-		float turn ;
-		void loadContent(){
-			loadFBX(playerAnimation[0], "Pokemon/trainerStand.fbx");
-			loadFBX(playerAnimation[1], "Pokemon/trainer3.fbx");
-			loadFBX(playerAnimation[2], "Pokemon/trainerThrow1.fbx");
-			this->animationState = 1;
 
-			this->t_position = vec3(-800, 50, -180);
-			this->position = vec3(800, -283.13f, 253.04);
-			this->turn = 0.0f;
-
-			//this->model_matrix = translate(mat4(),vec3(-800,50,-180))*scale(mat4(),vec3(4.0f,8.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));
-			this->model_matrix = translate(mat4(), position)*scale(mat4(), vec3(4.0f, 15.0f, 4.0f))*rotate(mat4(), radians(180.0f), vec3(0, 0, 1))*rotate(mat4(), radians(-90.0f), vec3(1, 0, 0));
-			this->proj_matrix = perspective(radians(60.0f), 1.0f,0.3f, 10000.0f);
-		}
-		void updatePosition(vec3 dv, float angle){
-			this->t_position += dv;
-			position -= dv;
-			turn = angle;
-			this->model_matrix =
-			translate(mat4(), t_position)*
-			scale(mat4(), vec3(4.0f, 15.0f, 4.0f))*
-			rotate(mat4(), radians(180.0f), vec3(0, 0, 1))
-			*rotate(mat4(), radians(-90.0f), vec3(1, 0, 0))
-			*rotate(mat4(), radians(angle), vec3(0, 0, 1));// -:left turn, +:right turn
-
-		}
-		void updateContent(){
-			std::vector<tinyobj::shape_t> new_shapes;
-			float timer = ( (float) timer_cnt/255.0f);
-			GetFbxAnimation(this->playerAnimation[animationState].myFbx, new_shapes, timer); // The Last Parameter is A Float in [0, 1], Specifying The Animation Location You Want to Retrieve
-			for(int i = 0; i < new_shapes.size(); i++)
-			{
-				glBindVertexArray (this->playerAnimation[animationState].scene.shapes[i].vao);
-				glBindBuffer(GL_ARRAY_BUFFER, this->playerAnimation[animationState].scene.shapes[i].buffers[0]);
-				glBufferData(GL_ARRAY_BUFFER, new_shapes[i].mesh.positions.size() * sizeof(float), 
-							&new_shapes[i].mesh.positions[0], GL_STATIC_DRAW);
-			}
-		}
-		void draw(bool isLighting){
-			
-			glActiveTexture(GL_TEXTURE0);
-			for(int i=0;i<this->playerAnimation[animationState].scene.shapeCount;i++){
-				// 1. Bind The VAO of the Shape
-				// 3. Bind Textures
-				// 4. Update Uniform Values by glUniform*
-				// 5. glDrawElements Call
-				glBindVertexArray (this->playerAnimation[animationState].scene.shapes[i].vao);
-				mat4 mvp1 = proj_matrix *
-					viewMatrix *
-					translate(mat4(),vec3(-300,70,-180))*scale(mat4(),vec3(4.0f,8.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));
-				
-				glUniformMatrix4fv(glGetUniformLocation(program, "um4mvp"), 1, GL_FALSE, value_ptr(mvp1));
-				glUniformMatrix4fv(glGetUniformLocation(program, "M"), 1, GL_FALSE, value_ptr(this->model_matrix));
-				glUniformMatrix4fv(glGetUniformLocation(program, "V"), 1, GL_FALSE, value_ptr(viewMatrix));
-				glUniformMatrix4fv(glGetUniformLocation(program, "P"), 1, GL_FALSE, value_ptr(this->proj_matrix));
-				glUniform1i(glGetUniformLocation(program, "trigger_lighting"), isLighting);
-				glUniform1i(glGetUniformLocation(program, "trigger_shadow"), trigger_shadow);
-
-				glBindTexture(GL_TEXTURE_2D,this->playerAnimation[animationState].scene.material_ids[this->playerAnimation[animationState].scene.shapes[i].mid]);
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->playerAnimation[animationState].scene.shapes[i].iBuffer);
-				glDrawElements(GL_TRIANGLES, this->playerAnimation[animationState].scene.shapes[i].iBuffer_elements, GL_UNSIGNED_INT, 0);
-			}
-		}
-		void ready(){
-			this->model_matrix = translate(mat4(),vec3(-80,50,-180))*scale(mat4(),vec3(4.0f,8.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));
-		}
-		void start(){
-			this->model_matrix = translate(mat4(),vec3(-80,50,-180))*scale(mat4(),vec3(4.0f,8.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));
-		}
-		vec3 getPosition(){
-			return position;
-		}
-
-};
-Player player;
-class Camera{
-	public:
-		float distanceFromPlayer;
-		float angleAroundPlayer;
-		vec3 position;
-		float pitch;
-		float yaw;
-		float roll;
-		float playerx, playery, playerz;
-		Player* player;
-		int  mode3D ; // 3 -> 3rd person perspective,    1 -> 1st person perspective
-		Camera(Player *player, vec3 position){
-			this->player = player;
-			this->position = position;
-
-			// initialize
-			this->distanceFromPlayer = 500;
-			this->angleAroundPlayer = 0;
-
-			this->pitch = 2.205892f;
-			this->yaw = 385.87f;
-			this->roll = 0.0f;
-			this->mode3D = 3;
-		}
-		bool isMode3D(){
-			return mode3D;
-		}
-		void setCamera(vec3 position){
-			this->position = position;
-		}
-		void updateCamera(vec3 position, float roll, float yaw, float pitch){
-			this->position = position;
-			this->roll = roll;
-			this->pitch = pitch;
-			this->yaw = yaw;
-		}
-		vec3 getPosition(){
-			return position;
-		}
-		float getPitch(){
-			return pitch;
-		}
-		float getRoll(){
-			return roll;
-		}
-		float getYaw(){
-			return yaw;
-		}
-		void setPlayer(Player *player){
-			this->player = player;
-		}
-
-		void move(){
-			float horizontalDistance = calculateHorizontalDistance();
-			float verticalDistance = calculateVerticalDistance();
-			calculateCameraPosition(horizontalDistance, verticalDistance);
-		}
-		void calculateCameraPosition(float horizontalDistance, float verticalDistance){
-			//float theta = player.getRotY() + angleAroundPlayer;
-			printf("--------------player-turn:%f\n", player->turn);
-			float theta = angleAroundPlayer;//+ player->turn;
-			float offsetX = (float)(horizontalDistance * sin(radians(theta)));
-			float offsetZ = (float)(horizontalDistance * cos(radians(theta)));
-
-			if (mode3D == 3){
-				position.x = player->position.x - offsetX;//+40;
-				position.z = player->position.z - offsetZ;//+ 700.0f;
-				printf("^^^offsetX:%.5f, offsetZ:%.5f, vertiD:%f\n", offsetX, offsetZ, verticalDistance);
-				position.y = player->position.y - verticalDistance;
-				printf("---------------------\n[1]player.position:(%f, %f, %f)\n", player->position.x, player->position.y, player->position.z);
-				printf("---------------------\n[1]camera.position:(%f, %f, %f)\n", position.x, position.y, position.z);
-			}
-			else if (mode3D == 1){
-				position.x = player->position.x;
-				position.z = player->position.z;// + 20.0f;
-				position.y = player->position.y;
+//**record the pokemons caught
 
 
-
-				angleAroundPlayer = -player->turn;
-				yaw = player->turn;
-
-				printf("---------------------\n[2]player.position:(%f, %f, %f)\n", player->position.x, player->position.y, player->position.z);
-				printf("---------------------\n[2]player.yaw:%f, pitch: %f, angle:%f\n", this->yaw, this->pitch, this->angleAroundPlayer);
-
-			}
-		}
-
-		void setZoom(float zoomLevel){
-			if (distanceFromPlayer > 800.0f && zoomLevel > 0)
-				return;
-			distanceFromPlayer += zoomLevel;
-			move();
-
-			printf("--in camera.setZoon: distance:%f\n", distanceFromPlayer);
-		}
-		void setPitch(float pitchChange){
-			pitch += pitchChange;
-			printf("--in camera.setPitch: pitch:%f\n", pitch);
-			//move(playerx, playery, playerz+0.1*(pitchChange>0.0f)?1:-1);
-
-			if (pitchChange > 0){
-				move();
-			}
-			else {
-				move();
-			}
-
-		}
-		void setYaw(float yawChange){
-			yaw += yawChange;
-			angleAroundPlayer -= yawChange;
-			printf("--in camera.setYawn: yaw:%f\n", yaw);
-		}
-		void calculateAngleAroundPlayer(float angleChange){
-			angleAroundPlayer += angleChange;
-		}
-		float calculateHorizontalDistance(){
-			return (float)(distanceFromPlayer * cos(radians(pitch)));
-			printf("in set hori--in camera.setPitch: pitch:%f\n", pitch);
-		}
-		float calculateVerticalDistance(){
-			return (float)(distanceFromPlayer * sin(radians(pitch)));
-		}
-};
-Camera camera(&player, eyeVector);
 FbxOBJ zombie[3];
 char zombie_filename[3][100] = {
 	"zombie_dead.FBX",
 	"zombie_walk.FBX",
 	"zombie_fury.FBX"
 };
+float ConvertCoordx(float x){
+	x=(x/2 + 0.5)*window_height;
+	return x;
+}
+float ConvertCoordy(float y){
+	y= window_height - (y/2 + 0.5)*window_height;
+	return y;
+}
 void checkError(const char *functionName)
 {
     GLenum error;
@@ -1263,8 +1658,8 @@ void updateView()
 	float angle = -2.5f ;
 	water_viewMatrix = matPitch/*rotate(mat4(), radians(angle)+mpitch, vec3(1.0f,0.0f,0.0f))*/ * matYaw * translate(mat4(1.0), vec3(eyeVector.x, eyeVector.y, eyeVector.z));
 	viewMatrix = rot *  trans;
-
-	/*if (camera.isMode3D()){
+	viewMatrix_view = viewMatrix;
+	if (camera.getMod3D()){
 		camera.setPlayer(&player);
 		matRoll = mat4(1.0f);
 		matPitch = mat4(1.0f);
@@ -1284,16 +1679,9 @@ void updateView()
 			translate(mat4(1.0), camera.position);
 		viewMatrix = rot*  trans;
 		
-		puts("++++++++++++_____________________");
-		printf("In, update view, camera.position:%f, %f, %f\n", camera.position.x, camera.position.y, camera.position.z);
-		printf("In, update view, pitch:%f, yaw:%f\n", camera.pitch, camera.yaw);
-		printf("In, update view, distance:%f\n", camera.distanceFromPlayer);
-		printf("In, update view, player.position:%f, %f, %f\n", player.position.x, player.position.y, player.position.z);
-		printf("In, update view, eyeVector:%f, %f, %f\n", eyeVector.x, eyeVector.y, eyeVector.z);
 
-		puts("++++++++++++_____________________");
 		
-	}*/
+	}
 }
 void My_Init()
 {
@@ -1301,13 +1689,18 @@ void My_Init()
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 
+	//***
+	memset(pokemon_bag, 0, sizeof(pokemon_bag));
 	// initialize camera
 	camera.position = eyeVector;
 	camera.yaw = getDegree(myaw);
 	camera.pitch = getDegree(mpitch);
 	camera.roll = getDegree(mroll);
 	camera.setPlayer(&player);
-	camera.move();
+	camera.angleAroundPlayer = 0;
+	camera.yaw = 363;
+	camera.mode3D = 3;
+	//---
 
 	// the program for skybox
 	skyBox.program = glCreateProgram();
@@ -1469,10 +1862,50 @@ void My_LoadModels()
 	// load the landscape
 	loadOBJ(scene, "Habitat.obj");
 
+	////fbx loading
 	player.loadContent();
-	/*for(int k=0;k<3;k++){
-		loadFBX(zombie[k], zombie_filename[k]);
-	}*/
+	vec3 position;
+	vec3 t_position;;
+	//->x     ^z
+
+
+	position = vec3(-1000, -115, -1126); t_position = vec3(1000, 50, 1200);
+	pokemon[1].loadContent("seed_frog", 1, "Pokemon/001.fbx", position, t_position, vec3(6.0, 6.0, 6.0), STAND);
+
+	position = vec3(-2530, -115, 50); t_position = vec3(2530, 50, -960);
+	pokemon[2].loadContent("fire_dragon", 2, "Pokemon/004.fbx", position, t_position, vec3(6.0, 6.0, 6.0), STAND);
+
+
+	position = vec3(-610, -115, 1003); t_position = vec3(610, 50, -930);
+	pokemon[3].loadContent("jenny_turtle", 3, "Pokemon/007.fbx", position, t_position, vec3(6.0, 6.0, 6.0), STAND);
+
+	position = vec3(-2230, -115, -1516); t_position = vec3(2230, 50, 1590);
+	pokemon[4].loadContent("big8_butterfly", 4, "Pokemon/012.fbx", position, t_position, vec3(6.0, 6.0, 6.0), FACE_DOWN);
+
+	position = vec3(2000, -115, -646.95); t_position = vec3(-2000, 50, 720);
+	pokemon[5].loadContent("bebe_bird", 5, "Pokemon/017.fbx", position, t_position, vec3(6.0, 6.0, 6.0), FACE_DOWN);
+
+	position = vec3(740, -115, 673); t_position = vec3(-740, 50, -600);
+	pokemon[6].loadContent("pikachu", 6, "Pokemon/025.fbx", position, t_position, vec3(7.0, 7.0, 7.0), FACE_DOWN);
+
+	position = vec3(440, -115, 2113); t_position = vec3(-440, 50, -2040);
+	pokemon[7].loadContent("fat_Ding", 7, "Pokemon/039.fbx", position, t_position, vec3(6.0, 6.0, 6.0), STAND);
+
+	position = vec3(560, -115, -1516); t_position = vec3(-560, 50, 1590);
+	pokemon[8].loadContent("walk_grass", 8, "Pokemon/043.fbx", position, t_position, vec3(8.0, 8.0, 8.0), FACE_DOWN);
+
+	position = vec3(3200, -1079, 1993); t_position = vec3(-3200, 1014, -1920);
+	pokemon[9].loadContent("three_ground_mouse", 9, "Pokemon/051.fbx", position, t_position, vec3(6.0, 6.0, 6.0), FACE_DOWN);
+
+	position = vec3(-610, -135, -106); t_position = vec3(610, 70, 180);
+	pokemon[10].loadContent("stupid_duck", 10, "Pokemon/054.fbx", position, t_position, vec3(6.0, 6.0, 6.0), FACE_DOWN);
+
+	position = vec3(500, -115, -676); t_position = vec3(-500, 50, 750);
+	pokemon[11].loadContent("Kabe_monster", 11, "Pokemon/143.fbx", position, t_position, vec3(0.5, 0.5, 0.5), STAND);
+
+	position = vec3(530, -115, 1333); t_position = vec3(-530, 50, -1260);
+	pokemon[12].loadContent("Meow_Meow", 12, "Pokemon/testMeow24.fbx", position, t_position, vec3(6.0, 6.0, 6.0), FACE_DOWN);
+	
 }
 
 void drawOBJ(GLuint programForDraw, Scene& scene, mat4& mvp, mat4& M, mat4& V, mat4& P, vec4& plane_equation, bool isLighting, bool isFog, bool isShadow){
@@ -1522,50 +1955,42 @@ void My_Display()
 	//glBindFramebuffer( GL_DRAW_FRAMEBUFFER,secondFrame.fbo);
 
 	// update view
-	mat4 P = perspective(radians(60.0f), 1.0f,0.3f, 100000.0f);
+	mat4 P = perspective(radians(60.0f), 1.0f, 0.3f, 100000.0f);
 	mat4 M = scale(mat4(), vec3(8000, 8000, 8000));
 	updateView();
 
 	//which render buffer attachment is written
-	glDrawBuffer( GL_COLOR_ATTACHMENT0);
-	glViewport( 0, 0, window_width, window_height);
-	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
+	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+	glViewport(0, 0, window_width, window_height);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	//draw skybox
 	mat4 mvp = P*
-	viewMatrix*
-	scale(mat4(), vec3(8000, 8000, 8000));
+		viewMatrix*
+		scale(mat4(), vec3(8000, 8000, 8000));
 	skyBox.draw(mvp);
 
 	// TODO: For Your FBX Model, Get New Animation Here
-	/*std::vector<tinyobj::shape_t> new_shapes;
-	float timer = ( (float) timer_cnt/255.0f);
-	GetFbxAnimation(zombie[animation_flag].myFbx, new_shapes, timer); // The Last Parameter is A Float in [0, 1], Specifying The Animation Location You Want to Retrieve
-	for(int i = 0; i < new_shapes.size(); i++)
-	{
-		glBindVertexArray (zombie[animation_flag].scene.shapes[i].vao);
-		glBindBuffer(GL_ARRAY_BUFFER, zombie[animation_flag].scene.shapes[i].buffers[0]);
-		glBufferData(GL_ARRAY_BUFFER, new_shapes[i].mesh.positions.size() * sizeof(float), 
-					&new_shapes[i].mesh.positions[0], GL_STATIC_DRAW);
-	}*/
+	//fbx updating
 	player.updateContent();
-
+	for (int i=1; i <= POKEMON_NUM; i++)
+		pokemon[i].updateContent();
 
 	glUseProgram(program);
 	//draw water refraction
 	glEnable(GL_CLIP_DISTANCE0);
 	float const water_height = 40;
-	float camera_distance = 2*fabs(eyeVector.y - (water_height));
+	float camera_distance = 2 * fabs(eyeVector.y - (water_height));
 
 	updateView();
-	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
+	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(), vec3(0, -90, 0));
 	mvp = P*
-	viewMatrix *
-	M;
-	glBindFramebuffer( GL_DRAW_FRAMEBUFFER,waterRendering.refractionFbo);
+		viewMatrix *
+		M;
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, waterRendering.refractionFbo);
 	//glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
-	glDrawBuffer( GL_COLOR_ATTACHMENT0);
+	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	drawOBJ(program, scene, mvp, M, viewMatrix, P, vec4(0, -1, 0, water_height), 0, 0, 0);
 	//drawOBJ(scene, mvp, M, vec4(0, 1, 0, -1000000));
@@ -1576,15 +2001,23 @@ void My_Display()
 	mpitch = -mpitch;
 	updateView();
 	glUseProgram(program);
-	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
+	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(), vec3(0, -90, 0));
 	mvp = P*
-	water_viewMatrix *
-	M;
-	glBindFramebuffer( GL_DRAW_FRAMEBUFFER,waterRendering.reflectionFbo);
+		water_viewMatrix *
+		M;
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, waterRendering.reflectionFbo);
 	//glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
-	glDrawBuffer( GL_COLOR_ATTACHMENT0);
+	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	//***fbx draw1 
 	player.draw(0);
+	for (int i = 1; i <= POKEMON_NUM; i++){
+		if (pokemon[i].isShow == true)
+			pokemon[i].draw(0);
+	}
+
+
 	drawOBJ(program, scene, mvp, M, water_viewMatrix, P, vec4(0, 1, 0, -water_height), 0, 0, 0);
 	//drawOBJ(scene, mvp, M, vec4(0, 0, 0, 1000000), 0);
 	mpitch = -mpitch;
@@ -1592,75 +2025,81 @@ void My_Display()
 	updateView();
 
 	/*
-	 *	shadow depth map rendering
-	 */
-	
-		//printf("program outside : %u\n", shadow.program);
-		glCullFace(GL_FRONT);
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LEQUAL);
-		glClearColor(1.0, 1.0, 1.0, 1.0);
-		updateView();
-		glUseProgram(shadow.program);
-		glBindFramebuffer(GL_FRAMEBUFFER, shadow.fbo);
-		//glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		//glDrawBuffer(GL_NONE); 
-		//glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
-		//glDrawBuffer( GL_COLOR_ATTACHMENT0);
+	*	shadow depth map rendering
+	*/
 
-		mat4 mat = viewMatrix;
-	 
-		vec3 forward(mat[0][2], mat[1][2], mat[2][2]);
-		vec3 target = forward * length(eyeVector) + eyeVector;
-		mat4 light_proj_matrix = glm::ortho(-2500.0f, 2500.0f, -2500.0f, 2500.0f, 1.0f, 2000.0f);
-		mat4 light_view_matrix = lookAt(vec3(-100, 100, 0), target, vec3(0, 1, 0));
-		//mat4 light_view_matrix = viewMatrix;
+	//printf("program outside : %u\n", shadow.program);
+	glCullFace(GL_FRONT);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+	glClearColor(1.0, 1.0, 1.0, 1.0);
+	updateView();
+	glUseProgram(shadow.program);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadow.fbo);
+	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//glDrawBuffer(GL_NONE); 
+	//glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
+	//glDrawBuffer( GL_COLOR_ATTACHMENT0);
 
-		mat4 matRoll = mat4(1.0f);
-		mat4 matPitch = mat4(1.0f);
-		mat4 matYaw = mat4(1.0f);
+	mat4 mat = viewMatrix;
 
-		matRoll = rotate(matRoll, mroll, vec3(0.0f,0.0f,1.0f));
-		matPitch = rotate(matPitch, mpitch, vec3(1.0f,0.0f,0.0f));
-		matYaw = rotate(matYaw, myaw, vec3(0.0f,1.0f,0.0f));
+	vec3 forward(mat[0][2], mat[1][2], mat[2][2]);
+	vec3 target = forward * length(eyeVector) + eyeVector;
+	mat4 light_proj_matrix = glm::ortho(-2500.0f, 2500.0f, -2500.0f, 2500.0f, 1.0f, 2000.0f);
+	mat4 light_view_matrix = lookAt(vec3(-100, 100, 0), target, vec3(0, 1, 0));
+	//mat4 light_view_matrix = viewMatrix;
 
-		mat4 rot = matRoll*matPitch*matYaw;
+	mat4 matRoll = mat4(1.0f);
+	mat4 matPitch = mat4(1.0f);
+	mat4 matYaw = mat4(1.0f);
 
-		mat4 trans = mat4(1.0f);
-		//trans = translate(trans, vec3(-100, -1600, 0));
-		trans = translate(trans, vec3(150, -500, 150));
+	matRoll = rotate(matRoll, mroll, vec3(0.0f, 0.0f, 1.0f));
+	matPitch = rotate(matPitch, mpitch, vec3(1.0f, 0.0f, 0.0f));
+	matYaw = rotate(matYaw, myaw, vec3(0.0f, 1.0f, 0.0f));
 
-		light_view_matrix = rotate(mat4(1.0f), radians(90.0f), vec3(1.0f, 0.0f, 0.0f)) * trans;
+	mat4 rot = matRoll*matPitch*matYaw;
 
-		mat4 scale_bias_matrix = mat4(
-			vec4(0.5f, 0.0f, 0.0f, 0.0f),
-			vec4(0.0f, 0.5f, 0.0f, 0.0f),
-			vec4(0.0f, 0.0f, 0.5f, 0.0f),
-			vec4(0.5f, 0.5f, 0.5f, 1.0f)
+	mat4 trans = mat4(1.0f);
+	//trans = translate(trans, vec3(-100, -1600, 0));
+	trans = translate(trans, vec3(150, -500, 150));
+
+	light_view_matrix = rotate(mat4(1.0f), radians(90.0f), vec3(1.0f, 0.0f, 0.0f)) * trans;
+
+	mat4 scale_bias_matrix = mat4(
+		vec4(0.5f, 0.0f, 0.0f, 0.0f),
+		vec4(0.0f, 0.5f, 0.0f, 0.0f),
+		vec4(0.0f, 0.0f, 0.5f, 0.0f),
+		vec4(0.5f, 0.5f, 0.5f, 1.0f)
 		);
-		mat4 light_vp_matrix = light_proj_matrix * light_view_matrix;
+	mat4 light_vp_matrix = light_proj_matrix * light_view_matrix;
 
-		mat4 shadow_sbpv_matrix = scale_bias_matrix * light_vp_matrix;
-		M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
-		
-		glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
-		glEnable(GL_POLYGON_OFFSET_FILL);
-		glPolygonOffset(4.0f, 4.0f);
-		player.draw(0);
-		drawOBJ(shadow.program, scene, light_vp_matrix * M, M, light_view_matrix, light_proj_matrix, vec4(0, 0, 0, 1000000), trigger_lighting, 0, 0);
-		glDisable(GL_POLYGON_OFFSET_FILL);
-		glCullFace(GL_BACK);
+	mat4 shadow_sbpv_matrix = scale_bias_matrix * light_vp_matrix;
+	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(), vec3(0, -90, 0));
+
+	glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+	glEnable(GL_POLYGON_OFFSET_FILL);
+	glPolygonOffset(4.0f, 4.0f);
+
+	//fbx draw2
+	player.draw(0);
+	for (int i = 1; i <= POKEMON_NUM; i++){
+		if (pokemon[i].isShow == true)
+			pokemon[i].draw(0);
+	}
+	drawOBJ(shadow.program, scene, light_vp_matrix * M, M, light_view_matrix, light_proj_matrix, vec4(0, 0, 0, 1000000), trigger_lighting, 0, 0);
+	glDisable(GL_POLYGON_OFFSET_FILL);
 
 	// draw city
+	glCullFace(GL_BACK);//???????
 	glUseProgram(program);
-	glViewport( 0, 0, window_width, window_height);
-	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
+	glViewport(0, 0, window_width, window_height);
+	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(), vec3(0, -90, 0));
 	mvp = P*
-	viewMatrix *
-	M;
-	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
-	glDrawBuffer( GL_COLOR_ATTACHMENT0);
+		viewMatrix *
+		M;
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	mat4 shadow_matrix = shadow_sbpv_matrix * M;
 	glUniformMatrix4fv(glGetUniformLocation(program, "shadow_matrix"), 1, GL_FALSE, value_ptr(shadow_matrix));
@@ -1672,39 +2111,34 @@ void My_Display()
 	terrain.draw(M, viewMatrix, P, trigger_fog);
 
 	// draw water
-	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
+	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(), vec3(0, -90, 0));
 	mvp = P*
-	viewMatrix *
-	M;
+		viewMatrix *
+		M;
 	glUseProgram(waterRendering.program);
-	glBindVertexArray(waterRendering.vao);	
-	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
-	glViewport( 0, 0, window_width, window_height);
+	glBindVertexArray(waterRendering.vao);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	glViewport(0, 0, window_width, window_height);
 	//glClear( GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
-	
+
 	GLuint texLoc;
 	glActiveTexture(GL_TEXTURE0);
-	texLoc  = glGetUniformLocation(waterRendering.program, "reflectionTex");
+	texLoc = glGetUniformLocation(waterRendering.program, "reflectionTex");
 	glUniform1i(texLoc, 0);
-	glBindTexture( GL_TEXTURE_2D, waterRendering.reflectionFboDataTexture);
+	glBindTexture(GL_TEXTURE_2D, waterRendering.reflectionFboDataTexture);
 
 	glActiveTexture(GL_TEXTURE1);
-	texLoc  = glGetUniformLocation(waterRendering.program, "refractionTex");
+	texLoc = glGetUniformLocation(waterRendering.program, "refractionTex");
 	glUniform1i(texLoc, 1);
-	glBindTexture( GL_TEXTURE_2D, waterRendering.refractionFboDataTexture);
+	glBindTexture(GL_TEXTURE_2D, waterRendering.refractionFboDataTexture);
 
 	glActiveTexture(GL_TEXTURE2);
-	texLoc  = glGetUniformLocation(waterRendering.program, "dudvMap");
+	texLoc = glGetUniformLocation(waterRendering.program, "dudvMap");
 	glUniform1i(texLoc, 2);
-	glBindTexture( GL_TEXTURE_2D, waterRendering.dudvMapTexture);
-
-	glActiveTexture(GL_TEXTURE3);
-	texLoc  = glGetUniformLocation(waterRendering.program, "normalMap");
-	glUniform1i(texLoc, 3);
-	glBindTexture( GL_TEXTURE_2D, waterRendering.normalMapTexture);
+	glBindTexture(GL_TEXTURE_2D, waterRendering.dudvMapTexture);
 
 	int f = glutGet(GLUT_ELAPSED_TIME);
-	if(timer_cnt % 9 == 0 ){
+	if (timer_cnt % 9 == 0){
 		waterRendering.moveFactor += 0.0003 * f * 0.001f;
 	}
 
@@ -1714,8 +2148,7 @@ void My_Display()
 	glUniformMatrix4fv(glGetUniformLocation(waterRendering.program, "proj_matrix"), 1, GL_FALSE, value_ptr(P));
 	glUniform3fv(glGetUniformLocation(waterRendering.program, "cameraPosition"), 1, &eyeVector[0]);
 	glUniform1f(glGetUniformLocation(waterRendering.program, "moveFactor"), waterRendering.moveFactor);
-	glUniform1i(glGetUniformLocation(waterRendering.program, "trigger_lighting"), trigger_lighting);
-	glDrawArrays(GL_TRIANGLES,0,6 );
+	glDrawArrays(GL_TRIANGLES, 0, 6);
 
 	if(gameMode == START_MENU)
 	{
@@ -1723,7 +2156,7 @@ void My_Display()
 	}
 	else if(gameMode == GAME_MODE)
 	{
-		if(gameUI.setPress) gameUI.DrawSettingList();
+		if(gameUI.mapPress) gameUI.DrawCatchList();
 		gameUI.DrawMode();
 
 	}
@@ -1734,50 +2167,14 @@ void My_Display()
 	}
 
 	glUseProgram(program);
+	//***fbx draw3
 	player.draw(trigger_lighting);
+	for (int i = 1; i <= POKEMON_NUM; i++){
+		if (pokemon[i].isShow == true)
+			pokemon[i].draw(trigger_lighting);
+	}
 
-	/*glUseProgram(program);
-	// draw the zombie
-	for(int i=0;i<zombie[animation_flag].scene.shapeCount;i++){
-		// 1. Bind The VAO of the Shape
-		// 3. Bind Textures
-		// 4. Update Uniform Values by glUniform*
-		// 5. glDrawElements Call
-		glBindVertexArray (zombie[animation_flag].scene.shapes[i].vao);
-		mat4 mvp1 =perspective(radians(60.0f), 1.0f,0.3f, 3000.0f)*
-			viewMatrix *
-			translate(mat4(),vec3(-120,50,0))*scale(mat4(),vec3(4.0f,4.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(90.0f),vec3(1,0,0));
-		M = translate(mat4(),vec3(-120,50,0))*scale(mat4(),vec3(4.0f,4.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(90.0f),vec3(1,0,0));
-		glUniformMatrix4fv(glGetUniformLocation(program, "um4mvp"), 1, GL_FALSE, value_ptr(mvp1));
-		glUniformMatrix4fv(glGetUniformLocation(program, "M"), 1, GL_FALSE, value_ptr(M));
-
-		glBindTexture(GL_TEXTURE_2D,zombie[animation_flag].scene.material_ids[zombie[animation_flag].scene.shapes[i].mid]);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, zombie[animation_flag].scene.shapes[i].iBuffer);
-		glDrawElements(GL_TRIANGLES, zombie[animation_flag].scene.shapes[i].iBuffer_elements, GL_UNSIGNED_INT, 0);
-	}*/
-
-	// frame buffer rendering
-
-	
-	/*glUseProgram(program);
-	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
-	glDrawBuffer( GL_COLOR_ATTACHMENT0);
-	//glViewport( 0, 0, window_width, window_height);
-	glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
-	glClear( GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture( GL_TEXTURE_2D, shadow.fboDataTexture);
-
-	glUseProgram(secondFrame.program);
-	glBindVertexArray(secondFrame.vao);	
-	static const GLfloat img_size[] = {window_width, window_height};
-	glUniform2fv(um4img_size, 1, img_size);
-	glUniform1i(um4cmp_bar, cmp_bar);
-	glUniform1i(um4control_signal, control_signal);
-	glDrawArrays(GL_TRIANGLE_FAN,0,4 );*/
-
-    glutSwapBuffers();
+	glutSwapBuffers();
 }
 
 void My_Reshape(int width, int height)
@@ -1855,24 +2252,102 @@ void My_Mouse(int button, int state, int x, int y)
 		{
 			gameUI.mapPress = 0;
 			gameUI.setPress = 0;
-			if(x>=350 && x<=650 && y>=500 && y<=600) gameMode = GAME_MODE;
-			else if(x>=350 && x<=650 && y>=625 && y<=720) gameMode = VIEW_MODE;
+			if(x>=ConvertCoordx(-0.3) && x<=ConvertCoordx(0.3) && y>=ConvertCoordy(-0.25) && y<=ConvertCoordy(-0.45)) gameMode = GAME_MODE;
+			else if(x>=ConvertCoordx(-0.3) && x<=ConvertCoordx(0.3) && y>=ConvertCoordy(-0.5) && y<=ConvertCoordy(-0.7)) gameMode = VIEW_MODE;
 		}
-		else if(gameMode == GAME_MODE || gameMode == VIEW_MODE)
+		else if(gameMode == VIEW_MODE)
 		{
-			if((pow((x-62.5),2) + pow((y-812.5),2)) <= 1407) gameMode = START_MENU; //START MENU
-			else if((pow((x-162.5),2) + pow((y-812.5),2)) <= 1407){ //MAP
-				gameUI.mapPress = 1 - gameUI.mapPress;
-				gameUI.setPress = 0;
-			}
-			else if((pow((x-262.5),2) + pow((y-812.5),2)) <= 1407){ //SETTINGS
+			if((pow((x-ConvertCoordx(-0.875)),2) + pow( (y-ConvertCoordy(-0.875)),2)) <= pow(0.075*window_height/2,2)) gameMode = START_MENU; //START MENU
+			else if((pow((x-ConvertCoordx(-0.515)),2) + pow((y-ConvertCoordy(-0.875)),2)) <= pow(0.075*window_height/2,2)){ //SETTINGS
 				gameUI.mapPress = 0;
 				gameUI.setPress = 1 - gameUI.setPress;
 			}
-			else if(gameUI.setPress && (x>325 || y<300)){ //SETING LIST
-
+			else if(gameUI.setPress && (x>ConvertCoordx(-0.35) || y<ConvertCoordy(0.3))){ //SETING LIST
 				gameUI.mapPress = 0;
 				gameUI.setPress = 0;
+			}
+			else if(x>=ConvertCoordx(-0.55) && x<=ConvertCoordx(-0.4) && y>=ConvertCoordy(0.1) && y<=ConvertCoordy(0.04)){//Terrain en/dis
+				terrain.toggle_enable_displacement();
+			}
+			else if(x>=ConvertCoordx(-0.55) && x<=ConvertCoordx(-0.49) && y>=ConvertCoordy(-0.008) && y<=ConvertCoordy(-0.068)){//Terrain plus
+				terrain.increase_dmap_depth();
+			}
+			else if(x>=ConvertCoordx(-0.46) && x<=ConvertCoordx(-0.4) && y>=ConvertCoordy(-0.008) && y<=ConvertCoordy(-0.068)){//Terrain minus
+				terrain.decrease_dmap_depth();
+			}
+			else if(x>=ConvertCoordx(-0.55) && x<=ConvertCoordx(-0.4) && y>=ConvertCoordy(-0.116) && y<=ConvertCoordy(-0.176)){//Auto routong
+				
+			}
+			else if(x>=ConvertCoordx(-0.55) && x<=ConvertCoordx(-0.4) && y>=ConvertCoordy(-0.224) && y<=ConvertCoordy(-0.284)){//Lighting
+				trigger_lighting=!trigger_lighting;
+				if(!trigger_lighting) trigger_shadow=false;
+			}
+			else if(x>=ConvertCoordx(-0.55) && x<=ConvertCoordx(-0.4) && y>=ConvertCoordy(-0.342) && y<=ConvertCoordy(-0.402)){//Shadow
+				if(trigger_lighting) trigger_shadow=!trigger_shadow;
+				else trigger_shadow = false;
+			}
+			else if(x>=ConvertCoordx(-0.55) && x<=ConvertCoordx(-0.4) && y>=ConvertCoordy(-0.45) && y<=ConvertCoordy(-0.51)){//Fog
+				trigger_fog=!trigger_fog;
+			}
+			else if(x>=ConvertCoordx(-0.55) && x<=ConvertCoordx(-0.49) && y>=ConvertCoordy(-0.558) && y<=ConvertCoordy(-0.618)){//First
+				camera.mode3D=1;
+			}
+			else if(x>=ConvertCoordx(-0.46) && x<=ConvertCoordx(-0.4) && y>=ConvertCoordy(-0.558) && y<=ConvertCoordy(-0.618)){//Third
+				camera.mode3D=3;
+			}
+			else{ //DEBUG
+				//gameUI.mapPress = 0;
+				//gameUI.setPress = 0;
+			}
+		}
+		else if(gameMode == GAME_MODE)
+		{
+			if((pow((x-ConvertCoordx(-0.875)),2) + pow( (y-ConvertCoordy(-0.875)),2)) <= pow(0.075*window_height/2,2)) gameMode = START_MENU; //START MENU
+			else if((pow((x-ConvertCoordx(-0.695)),2) + pow((y-ConvertCoordy(-0.875)),2)) <= pow(0.075*window_height/2,2)){ //MAP
+				gameUI.mapPress = 1 - gameUI.mapPress;
+				gameUI.setPress = 0;
+			}
+			else if(gameUI.mapPress && (y<ConvertCoordy(0.75) || y>ConvertCoordy(-0.75))){ //CATCH LIST
+				gameUI.mapPress = 0;
+				gameUI.setPress = 0;
+			}
+			else if(gameUI.mapPress){
+				if(pokemon_bag[1] && (x>=ConvertCoordx(-0.85) && x<=ConvertCoordx(-0.57) && y>=ConvertCoordy(0.47) && y<=ConvertCoordy(0.19))){//001
+					pokemon_bag[1] = 0;
+				}
+				else if(pokemon_bag[2] && (x>=ConvertCoordx(-0.45) && x<=ConvertCoordx(-0.17) && y>=ConvertCoordy(0.47) && y<=ConvertCoordy(0.19))){//002
+					pokemon_bag[2] = 0;
+				}
+				else if(pokemon_bag[3] && (x>=ConvertCoordx(-0.05) && x<=ConvertCoordx(0.23) && y>=ConvertCoordy(0.47) && y<=ConvertCoordy(0.19))){//003
+					pokemon_bag[3] = 0;
+				}
+				else if(pokemon_bag[4] && (x>=ConvertCoordx(0.19) && x<=ConvertCoordx(0.47) && y>=ConvertCoordy(0.47) && y<=ConvertCoordy(0.19))){//004
+					pokemon_bag[4] = 0;
+				}
+				else if(pokemon_bag[5] && (x>=ConvertCoordx(-0.85) && x<=ConvertCoordx(-0.57) && y>=ConvertCoordy(0.07) && y<=ConvertCoordy(-0.21))){//005
+					pokemon_bag[5] = 0;
+				}
+				else if(pokemon_bag[6] && (x>=ConvertCoordx(-0.45) && x<=ConvertCoordx(-0.17) && y>=ConvertCoordy(0.07) && y<=ConvertCoordy(-0.21))){//006
+					pokemon_bag[6] = 0;
+				}
+				else if(pokemon_bag[7] && (x>=ConvertCoordx(-0.05) && x<=ConvertCoordx(0.23) && y>=ConvertCoordy(0.07) && y<=ConvertCoordy(-0.21))){//007
+					pokemon_bag[7] = 0;
+				}
+				else if(pokemon_bag[8] && (x>=ConvertCoordx(0.19) && x<=ConvertCoordx(0.47) && y>=ConvertCoordy(0.07) && y<=ConvertCoordy(-0.21))){//008
+					pokemon_bag[8] = 0;
+				}
+				else if(pokemon_bag[9] && (x>=ConvertCoordx(-0.85) && x<=ConvertCoordx(-0.57) && y>=ConvertCoordy(-0.33) && y<=ConvertCoordy(-0.61))){//009
+					pokemon_bag[9] = 0;
+				}
+				else if(pokemon_bag[10] && (x>=ConvertCoordx(-0.45) && x<=ConvertCoordx(-0.17) && y>=ConvertCoordy(-0.33) && y<=ConvertCoordy(-0.61))){//010
+					pokemon_bag[10] = 0;
+				}
+				else if(pokemon_bag[11] && (x>=ConvertCoordx(-0.05) && x<=ConvertCoordx(0.23) && y>=ConvertCoordy(-0.33) && y<=ConvertCoordy(-0.61))){//011
+					pokemon_bag[11] = 0;
+				}
+				else if(pokemon_bag[12] && (x>=ConvertCoordx(0.19) && x<=ConvertCoordx(0.47) && y>=ConvertCoordy(-0.33) && y<=ConvertCoordy(-0.61))){//012
+					pokemon_bag[12] = 0;
+				}
 			}
 			else{ //DEBUG
 				//gameUI.mapPress = 0;
@@ -1918,8 +2393,18 @@ void My_Keyboard(unsigned char key, int x, int y)
 	//printf("Key %c is pressed at (%d, %d)\n", key, x, y);
 	float dx = 0; 
 	float dz = 0;
+	float step = 6;
 	switch (key)
 	{
+		/////////// ***add catch
+		case ' ':{
+					 catch_pokemon();
+					 break;
+		}
+		case 'q':{
+					 release_pokemon(-1);
+					 break;
+		}
 		case '8':
 		{
 					camera.angleAroundPlayer -= 3.0f;
@@ -1990,22 +2475,22 @@ void My_Keyboard(unsigned char key, int x, int y)
 		}
 		case 'w':
 			{
-			  dz = -2;
+					dz = -step;
 			  break;
 			}
 		case 's':
 			{
-			  dz = 2;
+					dz = step;
 			  break;
 			}
 		case 'a':
 			{
-			  dx = 2;
+					dx = step;
 			  break;
 			}
 		case 'd':
 			{
-			  dx = -2;
+					dx = -step;
 			  break;
 			}
 		case 'z':
@@ -2087,6 +2572,7 @@ void My_SpecialKeys(int key, int x, int y)
 {
 	float dx = 0;
 	float dz = 0;
+	float step = 30;
 	switch(key)
 	{
 	case GLUT_KEY_F1:
@@ -2109,31 +2595,39 @@ void My_SpecialKeys(int key, int x, int y)
 		printf("Page up is pressed at (%d, %d)\n", x, y);
 		break;
 	case GLUT_KEY_UP:
-		player.updatePosition(vec3(0.0, 0.0, -3.0), 0.0f);
+
+		player.animationState = 1;
+		player.updatePosition(vec3(0.0, 0.0, -step), 0.0f);
 		camera.move();
-		printf("up is pressed at (%d, %d)\n", x, y);
+		//printf("up is pressed at (%d, %d)\n", x, y);
 		break;
 		////////////////////Edit  : move backward
 	case GLUT_KEY_DOWN:
-		player.updatePosition(vec3(0.0, 0.0, 3.0), 180.0f);
+
+		player.animationState = 1;
+		player.updatePosition(vec3(0.0, 0.0, step), 180.0f);
 		//dz = 2;
 		camera.move();
-		printf("Down arrow is pressed at (%d, %d)\n", x, y);
+		//printf("Down arrow is pressed at (%d, %d)\n", x, y);
 		break;
 		////////////////////Edit  : move to left
 	case GLUT_KEY_LEFT:
-		player.updatePosition(vec3(-3.0, 0.0, 0.0), -90.0f);
+
+		player.animationState = 1;
+		player.updatePosition(vec3(-step, 0.0, 0.0), -90.0f);
 		//dx = 2;
 		camera.move();
-		printf("Left arrow is pressed at (%d, %d)\n", x, y);
+		//printf("Left arrow is pressed at (%d, %d)\n", x, y);
 		break;
 
 		////////////////////Edit  : move to right
 	case GLUT_KEY_RIGHT:
-		player.updatePosition(vec3(3.0, 0.0, 0.0), 90.0f);
+
+		player.animationState = 1;
+		player.updatePosition(vec3(step, 0.0, 0.0), 90.0f);
 		//dx = -2;
 		camera.move();
-		printf("right arrow is pressed at (%d, %d)\n", x, y);
+		//printf("right arrow is pressed at (%d, %d)\n", x, y);
 		break;
 	default:
 		printf("Other special key is pressed at (%d, %d)\n", x, y);
@@ -2150,6 +2644,13 @@ void My_SpecialKeys(int key, int x, int y)
 	eyeVector += (-dz * forward + dx * strafe) * speed;
 
 	updateView();
+	puts("---------------------");
+	puts("x,     y,     z");
+	printf("%f,   %f,  %f)\n", player.position.x, player.position.y, player.position.z);
+	puts("tx,     ty,     tz");
+	printf("%f,   %f,  %f)\n", player.t_position.x, player.t_position.y, player.t_position.z);
+
+	puts("---------------------");
 }
 
 void My_Menu(int id)
@@ -2171,12 +2672,18 @@ void My_Menu(int id)
 		break;
 	case MENU_ANI_DEAD:
 		animation_flag = 0;
+		//***
+		player.animationState = 0;
 		break;
 	case MENU_ANI_WALK:
 		animation_flag = 1;
+		//***
+		player.animationState = 1;
 		break;
 	case MENU_ANI_FURY:
 		animation_flag = 2;
+		//***
+		player.animationState = 2;
 		break;
 	default:
 		break;
