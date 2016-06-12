@@ -20,9 +20,10 @@
 #define MENU_ANI_DEAD 4
 #define MENU_ANI_WALK 5
 #define MENU_ANI_FURY 6
+#define SHADOW_MAP_SIZE 4096
 
-const int window_width = 1000;
-const int window_height = 1000;
+const int window_width = 800;
+const int window_height = 800;
 
 GLubyte timer_cnt = 0;
 bool timer_enabled = true;
@@ -46,8 +47,18 @@ GLfloat mroll = radians(0.0f), mpitch = radians(-16.7f), myaw = radians(300.5f);
 
 mat4 viewMatrix, water_viewMatrix;
 mat4 skybox_viewMatrix;
-vec3 eyeVector = vec3(-100, -100, 0); 
-int animation_flag = 0;
+vec3 eyeVector = vec3(830.2f, -642.0f, -445.01f);
+//vec3 eyeVector = vec3(-100, -100, 0); 
+int animation_flag;
+float getDegree(float rad){
+	return rad*(180.0f / 3.141592653589f);
+}
+
+/*
+ *	global lighting switch
+ *
+ */
+bool trigger_lighting = true;
 
 GLfloat mPos[2];
 typedef struct _texture_data
@@ -524,7 +535,7 @@ class Terrain{
 		GLuint tex_displacement, tex_color;
 		GLuint program;
 		GLuint vertex_buffer;
-		GLuint loc_mv_matrix, loc_mvp_matrix, loc_proj_matrix, loc_dmap_depth, loc_enable_fog, loc_tex_color, loc_m_matrix;
+		GLuint loc_mv_matrix, loc_mvp_matrix, loc_proj_matrix, loc_dmap_depth, loc_enable_fog, loc_tex_color, loc_m_matrix, loc_v_matrix;
 		GLuint LocTex_heightMap, LocTex_surfaceMap;
 		float dmap_depth;
 		bool wireframe, enable_fog, enable_displacement;
@@ -574,6 +585,7 @@ class Terrain{
 			glBindVertexArray(this->vao);
 
 			this->loc_mv_matrix = glGetUniformLocation(this->program, "mv_matrix");
+			this->loc_v_matrix = glGetUniformLocation(this->program, "v_matrix");
 			this->loc_mvp_matrix = glGetUniformLocation(this->program, "mvp_matrix");
 			this->loc_proj_matrix = glGetUniformLocation(this->program, "proj_matrix");
 			this->loc_dmap_depth = glGetUniformLocation(this->program, "dmap_depth");
@@ -581,7 +593,7 @@ class Terrain{
 			this->loc_tex_color = glGetUniformLocation(this->program, "tex_color");
 			this->loc_m_matrix = glGetUniformLocation(this->program, "m_matrix");
 
-			this->dmap_depth = 160.0f;
+			this->dmap_depth = 307.0f;
 
 			//texture_data tdata =  load_png("Terrain/heightmap.png");
 			printf("load Terrain/test.png\n");
@@ -615,7 +627,7 @@ class Terrain{
 
 			this->enable_displacement =true;
 			this->wireframe = false;
-			this->enable_fog = false;
+			this->enable_fog = true;
 
 		}
 		void draw(mat4& M, mat4& V, mat4& P){
@@ -650,6 +662,7 @@ class Terrain{
 			//mat4 proj_matrix = mat4();
 			glUniformMatrix4fv(this->loc_mv_matrix, 1, GL_FALSE, value_ptr(mv_matrix));
 			glUniformMatrix4fv(this->loc_m_matrix, 1, GL_FALSE, value_ptr(m_matrix));
+			glUniformMatrix4fv(this->loc_v_matrix, 1, GL_FALSE, value_ptr(V));
 			glUniformMatrix4fv(this->loc_proj_matrix, 1, GL_FALSE, value_ptr(proj_matrix));
 			glUniformMatrix4fv(this->loc_mvp_matrix, 1, GL_FALSE, value_ptr(proj_matrix * mv_matrix));
 			glUniform1f(this->loc_dmap_depth, this->enable_displacement ? this->dmap_depth : 0.0f);
@@ -802,31 +815,51 @@ class GameUI{
 	public:
 		GLuint vao;
 		GLuint vbo;
-		GLuint texLogo;
-		GLuint texGame;
-		GLuint texView;
+		GLuint tex[10];
 		GLuint program;
+		GLuint mapPress;
+		GLuint setPress;
 		void GameStartMenu()
 		{
 			glGenVertexArrays(1, &this->vao);
 			glBindVertexArray(this->vao);
 			static const GLfloat window_vertex[] =
 			{
-				//vec2 position vec2 texture_coord
+				//LOGO
 				0.75f*window_height/window_width,-0.15f,1.0f,0.0f,
 				-0.75f*window_height/window_width,-0.15f,0.0f,0.0f,
 				-0.75f*window_height/window_width,0.6f,0.0f,1.0f,
 				0.75f*window_height/window_width,0.6f,1.0f,1.0f,
-
+				//GAME MODE
 				0.3f*window_height/window_width,-0.45f,1.0f,0.0f,
 				-0.3f*window_height/window_width,-0.45f,0.0f,0.0f,
 				-0.3f*window_height/window_width,-0.25f,0.0f,1.0f,
 				0.3f*window_height/window_width,-0.25f,1.0f,1.0f,
-
+				//VIEW MODE
 				0.3f*window_height/window_width,-0.7f,1.0f,0.0f,
 				-0.3f*window_height/window_width,-0.7f,0.0f,0.0f,
 				-0.3f*window_height/window_width,-0.5f,0.0f,1.0f,
-				0.3f*window_height/window_width,-0.5f,1.0f,1.0f
+				0.3f*window_height/window_width,-0.5f,1.0f,1.0f,
+				//SETTING LIST
+				-0.35f*window_height/window_width,-1.0f,1.0f,0.0f,
+				-1.0f*window_height/window_width,-1.0f,0.0f,0.0f,
+				-1.0f*window_height/window_width,0.3f,0.0f,1.0f,
+				-0.35f*window_height/window_width,0.3f,1.0f,1.0f,
+				//MENU
+				-0.8f*window_height/window_width,-0.95f,1.0f,0.0f,
+				-0.95f*window_height/window_width,-0.95f,0.0f,0.0f,
+				-0.95f*window_height/window_width,-0.8f,0.0f,1.0f,
+				-0.8f*window_height/window_width,-0.8f,1.0f,1.0f,
+				//LIST
+				-0.62f*window_height/window_width,-0.95f,1.0f,0.0f,
+				-0.77f*window_height/window_width,-0.95f,0.0f,0.0f,
+				-0.77f*window_height/window_width,-0.8f,0.0f,1.0f,
+				-0.62f*window_height/window_width,-0.8f,1.0f,1.0f,
+				//SETTINGS
+				-0.44f*window_height/window_width,-0.95f,1.0f,0.0f,
+				-0.59f*window_height/window_width,-0.95f,0.0f,0.0f,
+				-0.59f*window_height/window_width,-0.8f,0.0f,1.0f,
+				-0.44f*window_height/window_width,-0.8f,1.0f,1.0f
 
 			};
 			/*const float vertices[] = {
@@ -840,79 +873,157 @@ class GameUI{
 			glEnableVertexAttribArray( 0 );
 			glEnableVertexAttribArray( 1 );
 
-			glActiveTexture(GL_TEXTURE0);
-			glGenTextures(1, &this->texLogo);
-			glBindTexture(GL_TEXTURE_2D, this->texLogo);
+			char filename[10][100];
+			strcpy(filename[0], "GameUI/pokemonLogo.png");
+			strcpy(filename[1], "GameUI/gameMode.png");
+			strcpy(filename[2], "GameUI/viewMode.png");
+			strcpy(filename[3], "GameUI/settingList1.png");
+			strcpy(filename[4], "GameUI/home-icon2.png");
+			strcpy(filename[5], "GameUI/Book-icon.png");
+			strcpy(filename[6], "GameUI/settings.png");
 
-			printf("load GameUI/pokemonLogo.png\n");
-			texture_data logo_data = load_png("GameUI/pokemonLogo.png");
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, logo_data.width, logo_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, logo_data.data);
-			delete[] logo_data.data;
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-			glActiveTexture(GL_TEXTURE0);
-			glGenTextures(1, &this->texGame);
-			glBindTexture(GL_TEXTURE_2D, this->texGame);
+			for(int i=0;i<7;i++)
+			{
+				glActiveTexture(GL_TEXTURE0);
+				glGenTextures(1, &this->tex[i]);
+				glBindTexture(GL_TEXTURE_2D, this->tex[i]);
 
-			printf("load GameUI/gameMode.png\n");
-			texture_data logo2_data = load_png("GameUI/gameMode.png");
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, logo2_data.width, logo2_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, logo2_data.data);
-			delete[] logo2_data.data;
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				printf("load %s\n",filename[i]);
+				texture_data logo_data = load_png(filename[i]);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, logo_data.width, logo_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, logo_data.data);
+				delete[] logo_data.data;
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			}
 
-			glActiveTexture(GL_TEXTURE0);
-			glGenTextures(1, &this->texView);
-			glBindTexture(GL_TEXTURE_2D, this->texView);
-
-			printf("load GameUI/viewMode.png\n");
-			texture_data logo3_data = load_png("GameUI/viewMode.png");
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, logo3_data.width, logo3_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, logo3_data.data);
-			delete[] logo3_data.data;
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		}
 		void DrawMenu()
 		{
 			glUseProgram(this->program);
-			glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
 			glBindVertexArray(this->vao);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, this->texLogo);
-			glDrawArrays(GL_TRIANGLE_FAN,0,4);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, this->texGame);
-			glDrawArrays(GL_TRIANGLE_FAN,4,4);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, this->texView);
-			glDrawArrays(GL_TRIANGLE_FAN,8,4);
+			for(int i=0;i<3;i++){
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->tex[i]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*i,4);
+			}
+		}
+		void DrawMode()
+		{
+			glUseProgram(this->program);
+			glBindVertexArray(this->vao);
+			for(int i=4;i<7;i++){
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->tex[i]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*i,4);
+			}
+		}
+		void DrawSettingList()
+		{
+			glUseProgram(this->program);
+			glBindVertexArray(this->vao);
+			for(int i=3;i<4;i++){
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->tex[i]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*i,4);
+			}
 		}
 
 };
 GameUI gameUI;
-class Camera{
-	// 0 for free, 1 for 3-rd person camera
-	int camera_type;
-	vec3 eyeVector;
-	Camera(){
-		eyeVector = vec3(-100, -100, 0); 
-	};
+class Shadow{
+	public:
+		GLuint fbo;
+		GLuint depthrbo;
+		GLuint fboDataTexture;
+		GLuint program;
+		void init(){
+			this->program = glCreateProgram();
+
+			GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+			GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+
+			char** vertexShaderSource = loadShaderSource("shadow_vertex.vs.glsl");
+			char** fragmentShaderSource = loadShaderSource("shadow_fragment.fs.glsl");
+
+			glShaderSource(vertexShader, 1, vertexShaderSource, NULL);
+			glShaderSource(fragmentShader, 1, fragmentShaderSource, NULL);
+
+			freeShaderSource(vertexShaderSource);
+			freeShaderSource(fragmentShaderSource);
+
+			glCompileShader(vertexShader);
+			glCompileShader(fragmentShader);
+
+			shaderLog(vertexShader);
+			shaderLog(fragmentShader);
+
+			glAttachShader(this->program, vertexShader);
+			glAttachShader(this->program, fragmentShader);
+
+			glLinkProgram(this->program);
+			glUseProgram(this->program);
+
+			// set up fbo and texture
+			glGenFramebuffers( 1, &this->fbo);//Create FBO
+			glBindFramebuffer(GL_FRAMEBUFFER, this->fbo);
+
+			// TEXTURE doesn't have initial value.
+			// fbo texture
+			glGenTextures( 1, &this->fboDataTexture);//Create fobDataTexture
+			glBindTexture( GL_TEXTURE_2D, this->fboDataTexture);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE, 0,  GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+			//Set buffer texture to current fbo
+			glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, this->fboDataTexture, 0);
+
+
+
+		}
 };
-Camera camera;
+Shadow shadow;
 class Player{
 	public:
 		// 0 for standing, 1 for walking, and 2 for attacking
 		FbxOBJ playerAnimation[3];
 		int animationState;
 		mat4 model_matrix;
+		mat4 proj_matrix;
+		//t_position for transform 
+		vec3 t_position ;
+		//position for player actual position
+		vec3 position ;
+		//turn for turn right , left , back
+		float turn ;
 		void loadContent(){
 			loadFBX(playerAnimation[0], "Pokemon/trainerStand.fbx");
 			loadFBX(playerAnimation[1], "Pokemon/trainer3.fbx");
 			loadFBX(playerAnimation[2], "Pokemon/trainerThrow1.fbx");
-			animationState = 1;
+			this->animationState = 1;
 
-			this->model_matrix = translate(mat4(),vec3(-800,50,-180))*scale(mat4(),vec3(4.0f,8.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));
+			this->t_position = vec3(-800, 50, -180);
+			this->position = vec3(800, -283.13f, 253.04);
+			this->turn = 0.0f;
+
+			//this->model_matrix = translate(mat4(),vec3(-800,50,-180))*scale(mat4(),vec3(4.0f,8.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));
+			this->model_matrix = translate(mat4(), position)*scale(mat4(), vec3(4.0f, 15.0f, 4.0f))*rotate(mat4(), radians(180.0f), vec3(0, 0, 1))*rotate(mat4(), radians(-90.0f), vec3(1, 0, 0));
+			this->proj_matrix = perspective(radians(60.0f), 1.0f,0.3f, 10000.0f);
+		}
+		void updatePosition(vec3 dv, float angle){
+			this->t_position += dv;
+			position -= dv;
+			turn = angle;
+			this->model_matrix =
+			translate(mat4(), t_position)*
+			scale(mat4(), vec3(4.0f, 15.0f, 4.0f))*
+			rotate(mat4(), radians(180.0f), vec3(0, 0, 1))
+			*rotate(mat4(), radians(-90.0f), vec3(1, 0, 0))
+			*rotate(mat4(), radians(angle), vec3(0, 0, 1));// -:left turn, +:right turn
+
 		}
 		void updateContent(){
 			std::vector<tinyobj::shape_t> new_shapes;
@@ -926,8 +1037,8 @@ class Player{
 							&new_shapes[i].mesh.positions[0], GL_STATIC_DRAW);
 			}
 		}
-		void draw(){
-			glUseProgram(program);
+		void draw(bool isLighting){
+			
 			glActiveTexture(GL_TEXTURE0);
 			for(int i=0;i<this->playerAnimation[animationState].scene.shapeCount;i++){
 				// 1. Bind The VAO of the Shape
@@ -935,12 +1046,15 @@ class Player{
 				// 4. Update Uniform Values by glUniform*
 				// 5. glDrawElements Call
 				glBindVertexArray (this->playerAnimation[animationState].scene.shapes[i].vao);
-				mat4 mvp1 =perspective(radians(60.0f), 1.0f,0.3f, 10000.0f)*
+				mat4 mvp1 = proj_matrix *
 					viewMatrix *
 					this->model_matrix ;
 				
 				glUniformMatrix4fv(glGetUniformLocation(program, "um4mvp"), 1, GL_FALSE, value_ptr(mvp1));
 				glUniformMatrix4fv(glGetUniformLocation(program, "M"), 1, GL_FALSE, value_ptr(this->model_matrix));
+				glUniformMatrix4fv(glGetUniformLocation(program, "V"), 1, GL_FALSE, value_ptr(viewMatrix));
+				glUniformMatrix4fv(glGetUniformLocation(program, "P"), 1, GL_FALSE, value_ptr(this->proj_matrix));
+				glUniform1i(glGetUniformLocation(program, "trigger_lighting"), isLighting);
 
 				glBindTexture(GL_TEXTURE_2D,this->playerAnimation[animationState].scene.material_ids[this->playerAnimation[animationState].scene.shapes[i].mid]);
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->playerAnimation[animationState].scene.shapes[i].iBuffer);
@@ -953,9 +1067,138 @@ class Player{
 		void start(){
 			this->model_matrix = translate(mat4(),vec3(-80,50,-180))*scale(mat4(),vec3(4.0f,8.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));
 		}
+		vec3 getPosition(){
+			return position;
+		}
 
 };
 Player player;
+class Camera{
+	public:
+		float distanceFromPlayer;
+		float angleAroundPlayer;
+		vec3 position;
+		float pitch;
+		float yaw;
+		float roll;
+		float playerx, playery, playerz;
+		Player* player;
+		int  mode3D ; // 3 -> 3rd person perspective,    1 -> 1st person perspective
+		Camera(Player *player, vec3 position){
+			this->player = player;
+			this->position = position;
+
+			// initialize
+			this->distanceFromPlayer = 500;
+			this->angleAroundPlayer = 0;
+
+			this->pitch = 2.205892f;
+			this->yaw = 385.87f;
+			this->roll = 0.0f;
+			this->mode3D = 3;
+		}
+		bool isMode3D(){
+			return mode3D;
+		}
+		void setCamera(vec3 position){
+			this->position = position;
+		}
+		void updateCamera(vec3 position, float roll, float yaw, float pitch){
+			this->position = position;
+			this->roll = roll;
+			this->pitch = pitch;
+			this->yaw = yaw;
+		}
+		vec3 getPosition(){
+			return position;
+		}
+		float getPitch(){
+			return pitch;
+		}
+		float getRoll(){
+			return roll;
+		}
+		float getYaw(){
+			return yaw;
+		}
+		void setPlayer(Player *player){
+			this->player = player;
+		}
+
+		void move(){
+			float horizontalDistance = calculateHorizontalDistance();
+			float verticalDistance = calculateVerticalDistance();
+			calculateCameraPosition(horizontalDistance, verticalDistance);
+		}
+		void calculateCameraPosition(float horizontalDistance, float verticalDistance){
+			//float theta = player.getRotY() + angleAroundPlayer;
+			printf("--------------player-turn:%f\n", player->turn);
+			float theta = angleAroundPlayer;//+ player->turn;
+			float offsetX = (float)(horizontalDistance * sin(radians(theta)));
+			float offsetZ = (float)(horizontalDistance * cos(radians(theta)));
+
+			if (mode3D == 3){
+				position.x = player->position.x - offsetX;//+40;
+				position.z = player->position.z - offsetZ;//+ 700.0f;
+				printf("^^^offsetX:%.5f, offsetZ:%.5f, vertiD:%f\n", offsetX, offsetZ, verticalDistance);
+				position.y = player->position.y - verticalDistance;
+				printf("---------------------\n[1]player.position:(%f, %f, %f)\n", player->position.x, player->position.y, player->position.z);
+				printf("---------------------\n[1]camera.position:(%f, %f, %f)\n", position.x, position.y, position.z);
+			}
+			else if (mode3D == 1){
+				position.x = player->position.x;
+				position.z = player->position.z;// + 20.0f;
+				position.y = player->position.y;
+
+
+
+				angleAroundPlayer = -player->turn;
+				yaw = player->turn;
+
+				printf("---------------------\n[2]player.position:(%f, %f, %f)\n", player->position.x, player->position.y, player->position.z);
+				printf("---------------------\n[2]player.yaw:%f, pitch: %f, angle:%f\n", this->yaw, this->pitch, this->angleAroundPlayer);
+
+			}
+		}
+
+		void setZoom(float zoomLevel){
+			if (distanceFromPlayer > 800.0f && zoomLevel > 0)
+				return;
+			distanceFromPlayer += zoomLevel;
+			move();
+
+			printf("--in camera.setZoon: distance:%f\n", distanceFromPlayer);
+		}
+		void setPitch(float pitchChange){
+			pitch += pitchChange;
+			printf("--in camera.setPitch: pitch:%f\n", pitch);
+			//move(playerx, playery, playerz+0.1*(pitchChange>0.0f)?1:-1);
+
+			if (pitchChange > 0){
+				move();
+			}
+			else {
+				move();
+			}
+
+		}
+		void setYaw(float yawChange){
+			yaw += yawChange;
+			angleAroundPlayer -= yawChange;
+			printf("--in camera.setYawn: yaw:%f\n", yaw);
+		}
+		void calculateAngleAroundPlayer(float angleChange){
+			angleAroundPlayer += angleChange;
+		}
+		float calculateHorizontalDistance(){
+			return (float)(distanceFromPlayer * cos(radians(pitch)));
+			printf("in set hori--in camera.setPitch: pitch:%f\n", pitch);
+		}
+		float calculateVerticalDistance(){
+			return (float)(distanceFromPlayer * sin(radians(pitch)));
+		}
+};
+Camera camera(&player, eyeVector);
 FbxOBJ zombie[3];
 char zombie_filename[3][100] = {
 	"zombie_dead.FBX",
@@ -995,12 +1238,51 @@ void updateView()
 	float angle = -2.5f ;
 	water_viewMatrix = matPitch/*rotate(mat4(), radians(angle)+mpitch, vec3(1.0f,0.0f,0.0f))*/ * matYaw * translate(mat4(1.0), vec3(eyeVector.x, eyeVector.y, eyeVector.z));
 	viewMatrix = rot *  trans;
+
+	/*if (camera.isMode3D()){
+		camera.setPlayer(&player);
+		matRoll = mat4(1.0f);
+		matPitch = mat4(1.0f);
+		matYaw = mat4(1.0f);
+
+		matRoll = rotate(matRoll, radians(camera.getRoll()), vec3(0.0f, 0.0f, 1.0f));
+		matPitch = rotate(matPitch, radians(camera.pitch), vec3(1.0f, 0.0f, 0.0f));
+		matYaw = rotate(matYaw, radians(camera.yaw), vec3(0.0f, 1.0f, 0.0f));
+
+		rot = matRoll*matPitch*matYaw;
+		trans = mat4(1.0f);
+		trans = translate(trans, camera.position);
+		skybox_viewMatrix = matPitch*matYaw * translate(mat4(1.0), camera.position);
+		float angle = -2.5f;
+		water_viewMatrix = matPitch *
+			matYaw *
+			translate(mat4(1.0), camera.position);
+		viewMatrix = rot*  trans;
+		
+		puts("++++++++++++_____________________");
+		printf("In, update view, camera.position:%f, %f, %f\n", camera.position.x, camera.position.y, camera.position.z);
+		printf("In, update view, pitch:%f, yaw:%f\n", camera.pitch, camera.yaw);
+		printf("In, update view, distance:%f\n", camera.distanceFromPlayer);
+		printf("In, update view, player.position:%f, %f, %f\n", player.position.x, player.position.y, player.position.z);
+		printf("In, update view, eyeVector:%f, %f, %f\n", eyeVector.x, eyeVector.y, eyeVector.z);
+
+		puts("++++++++++++_____________________");
+		
+	}*/
 }
 void My_Init()
 {
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
+
+	// initialize camera
+	camera.position = eyeVector;
+	camera.yaw = getDegree(myaw);
+	camera.pitch = getDegree(mpitch);
+	camera.roll = getDegree(mroll);
+	camera.setPlayer(&player);
+	camera.move();
 
 	// the program for skybox
 	skyBox.program = glCreateProgram();
@@ -1152,6 +1434,8 @@ void My_Init()
 	//GameUI init
 	gameMode = START_MENU;
 	gameUI.GameStartMenu();
+	// initialize shadow object
+	shadow.init();
 }
 
 void My_LoadModels()
@@ -1160,25 +1444,36 @@ void My_LoadModels()
 	// load the landscape
 	loadOBJ(scene, "Habitat.obj");
 
-	player.loadContent();
+	//player.loadContent();
 	/*for(int k=0;k<3;k++){
 		loadFBX(zombie[k], zombie_filename[k]);
 	}*/
 }
-void drawOBJ(Scene& scene, mat4& mvp, mat4& M, vec4& plane_equation){
-
+void drawOBJ(GLuint programForDraw, Scene& scene, mat4& mvp, mat4& M, mat4& V, mat4& P, vec4& plane_equation, bool isLighting){
+	glUseProgram(programForDraw);
+	//printf("program inside : %u\n", programForDraw);
 	for(int i = 0; i < scene.shapeCount; i++)
 	{
 
 		glBindVertexArray (scene.shapes[i].vao);
-		glUniformMatrix4fv(glGetUniformLocation(program, "um4mvp"), 1, GL_FALSE, value_ptr(mvp));
-		glUniformMatrix4fv(glGetUniformLocation(program, "M"), 1, GL_FALSE, value_ptr(M));
-		glUniform4fv(glGetUniformLocation(program, "plane"), 1, &plane_equation[0]);
+		glUniformMatrix4fv(glGetUniformLocation(programForDraw, "um4mvp"), 1, GL_FALSE, value_ptr(mvp));
+		glUniformMatrix4fv(glGetUniformLocation(programForDraw, "M"), 1, GL_FALSE, value_ptr(M));
+		glUniformMatrix4fv(glGetUniformLocation(programForDraw, "V"), 1, GL_FALSE, value_ptr(V));
+		glUniformMatrix4fv(glGetUniformLocation(programForDraw, "P"), 1, GL_FALSE, value_ptr(P));
+		glUniform4fv(glGetUniformLocation(programForDraw, "plane"), 1, &plane_equation[0]);
+		glUniform3fv(glGetUniformLocation(programForDraw, "camera_position"), 1, &eyeVector[0]);
+		glUniform1i(glGetUniformLocation(programForDraw, "trigger_lighting"), isLighting);
 
 		// abandoned codes which used to draw scnens with only material_ids[0]
 		/*glBindTexture(GL_TEXTURE_2D,scene.material_ids[scene.shapes[i].mid]);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, scene.shapes[i].iBuffer);
 		glDrawElements(GL_TRIANGLES, scene.shapes[i].iBuffer_elements, GL_UNSIGNED_INT, 0);*/
+		if(programForDraw == program){
+			glActiveTexture(GL_TEXTURE1);
+			GLuint texLoc  = glGetUniformLocation(program, "shadow_tex");
+			glUniform1i(texLoc, 1);
+			glBindTexture( GL_TEXTURE_2D, shadow.fboDataTexture);
+		}
 		glActiveTexture(GL_TEXTURE0);
 		for(int j=0;j<scene.shapes[i].iBufNumber;j++){
 
@@ -1197,6 +1492,8 @@ void My_Display()
 	//glBindFramebuffer( GL_DRAW_FRAMEBUFFER,secondFrame.fbo);
 
 	// update view
+	mat4 P = perspective(radians(60.0f), 1.0f,0.3f, 100000.0f);
+	mat4 M = scale(mat4(), vec3(8000, 8000, 8000));
 	updateView();
 
 	//which render buffer attachment is written
@@ -1205,14 +1502,12 @@ void My_Display()
 	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	mat4 P = perspective(radians(60.0f), 1.0f,0.3f, 100000.0f);
-	mat4 M = scale(mat4(), vec3(8000, 8000, 8000));
 	//draw skybox
 	mat4 mvp = P*
 	viewMatrix*
 	scale(mat4(), vec3(8000, 8000, 8000));
 	skyBox.draw(mvp);
-	
+
 	// TODO: For Your FBX Model, Get New Animation Here
 	/*std::vector<tinyobj::shape_t> new_shapes;
 	float timer = ( (float) timer_cnt/255.0f);
@@ -1224,7 +1519,7 @@ void My_Display()
 		glBufferData(GL_ARRAY_BUFFER, new_shapes[i].mesh.positions.size() * sizeof(float), 
 					&new_shapes[i].mesh.positions[0], GL_STATIC_DRAW);
 	}*/
-	player.updateContent();
+	//player.updateContent();
 
 
 	glUseProgram(program);
@@ -1242,7 +1537,7 @@ void My_Display()
 	//glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
 	glDrawBuffer( GL_COLOR_ATTACHMENT0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	drawOBJ(scene, mvp, M, vec4(0, -1, 0, water_height));
+	drawOBJ(program, scene, mvp, M, viewMatrix, P, vec4(0, -1, 0, water_height), 0);
 	//drawOBJ(scene, mvp, M, vec4(0, 1, 0, -1000000));
 
 
@@ -1259,14 +1554,75 @@ void My_Display()
 	//glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
 	glDrawBuffer( GL_COLOR_ATTACHMENT0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	drawOBJ(scene, mvp, M, vec4(0, 1, 0, -water_height));
+	drawOBJ(program, scene, mvp, M, water_viewMatrix, P, vec4(0, 1, 0, -water_height), 0);
 	//drawOBJ(scene, mvp, M, vec4(0, 0, 0, 1000000), 0);
 	mpitch = -mpitch;
 	eyeVector.y -= camera_distance;
 	updateView();
 
+	/*
+	 *	shadow depth map rendering
+	 */
+	
+		//printf("program outside : %u\n", shadow.program);
+		glCullFace(GL_FRONT);
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
+		glClearColor(1.0, 1.0, 1.0, 1.0);
+		updateView();
+		glUseProgram(shadow.program);
+		glBindFramebuffer(GL_FRAMEBUFFER, shadow.fbo);
+		//glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		//glDrawBuffer(GL_NONE); 
+		//glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
+		//glDrawBuffer( GL_COLOR_ATTACHMENT0);
+
+		mat4 mat = viewMatrix;
+	 
+		vec3 forward(mat[0][2], mat[1][2], mat[2][2]);
+		vec3 target = forward * length(eyeVector) + eyeVector;
+		mat4 light_proj_matrix = glm::ortho(-2500.0f, 2500.0f, -2500.0f, 2500.0f, 1.0f, 2000.0f);
+		mat4 light_view_matrix = lookAt(vec3(-100, 100, 0), target, vec3(0, 1, 0));
+		//mat4 light_view_matrix = viewMatrix;
+
+		mat4 matRoll = mat4(1.0f);
+		mat4 matPitch = mat4(1.0f);
+		mat4 matYaw = mat4(1.0f);
+
+		matRoll = rotate(matRoll, mroll, vec3(0.0f,0.0f,1.0f));
+		matPitch = rotate(matPitch, mpitch, vec3(1.0f,0.0f,0.0f));
+		matYaw = rotate(matYaw, myaw, vec3(0.0f,1.0f,0.0f));
+
+		mat4 rot = matRoll*matPitch*matYaw;
+
+		mat4 trans = mat4(1.0f);
+		//trans = translate(trans, vec3(-100, -1600, 0));
+		trans = translate(trans, vec3(150, -500, 150));
+
+		light_view_matrix = rotate(mat4(1.0f), radians(90.0f), vec3(1.0f, 0.0f, 0.0f)) * trans;
+
+		mat4 scale_bias_matrix = mat4(
+			vec4(0.5f, 0.0f, 0.0f, 0.0f),
+			vec4(0.0f, 0.5f, 0.0f, 0.0f),
+			vec4(0.0f, 0.0f, 0.5f, 0.0f),
+			vec4(0.5f, 0.5f, 0.5f, 1.0f)
+		);
+		mat4 light_vp_matrix = light_proj_matrix * light_view_matrix;
+
+		mat4 shadow_sbpv_matrix = scale_bias_matrix * light_vp_matrix;
+		M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
+		
+		glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+		glEnable(GL_POLYGON_OFFSET_FILL);
+		glPolygonOffset(4.0f, 4.0f);
+		drawOBJ(shadow.program, scene, light_vp_matrix * M, M, light_view_matrix, light_proj_matrix, vec4(0, 0, 0, 1000000), trigger_lighting);
+		glDisable(GL_POLYGON_OFFSET_FILL);
+	
 	// draw city
+	glCullFace(GL_BACK);
 	glUseProgram(program);
+	glViewport( 0, 0, window_width, window_height);
 	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
 	mvp = P*
 	viewMatrix *
@@ -1274,7 +1630,9 @@ void My_Display()
 	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
 	glDrawBuffer( GL_COLOR_ATTACHMENT0);
 	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	drawOBJ(scene, mvp, M, vec4(0, 0, 0, 1000000));
+	mat4 shadow_matrix = shadow_sbpv_matrix * M;
+	glUniformMatrix4fv(glGetUniformLocation(program, "shadow_matrix"), 1, GL_FALSE, value_ptr(shadow_matrix));
+	drawOBJ(program, scene, mvp, M, viewMatrix, P, vec4(0, 0, 0, 1000000), trigger_lighting);
 
 	// draw terrian
 	M = mat4();
@@ -1323,10 +1681,21 @@ void My_Display()
 	if(gameMode == START_MENU)
 	{
 		gameUI.DrawMenu();
+	}
+	else if(gameMode == GAME_MODE)
+	{
+		if(gameUI.setPress) gameUI.DrawSettingList();
+		gameUI.DrawMode();
 
 	}
+	else if(gameMode == VIEW_MODE)
+	{
+		if(gameUI.setPress) gameUI.DrawSettingList();
+		gameUI.DrawMode();
+	}
 
-	player.draw();
+	glUseProgram(program);
+	//player.draw(trigger_lighting);
 
 	/*glUseProgram(program);
 	// draw the zombie
@@ -1350,13 +1719,16 @@ void My_Display()
 
 	// frame buffer rendering
 
-	/*
-	glUseProgram(program);
-	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
-	glViewport( 0, 0, window_width, window_height);
-	glClear( GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
 	
-	glBindTexture( GL_TEXTURE_2D, secondFrame.fboDataTexture);
+	/*glUseProgram(program);
+	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
+	glDrawBuffer( GL_COLOR_ATTACHMENT0);
+	//glViewport( 0, 0, window_width, window_height);
+	glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+	glClear( GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture( GL_TEXTURE_2D, shadow.fboDataTexture);
 
 	glUseProgram(secondFrame.program);
 	glBindVertexArray(secondFrame.vao);	
@@ -1402,9 +1774,15 @@ void onMouseMotion(int x, int y)
 
 		myaw -= mxSen * delta.x;
 		mpitch -= mySen * delta.y;
+		if (camera.mode3D){
+			camera.setPitch(getDegree(-mySen * delta.y));
+			camera.setYaw(getDegree(-mxSen * delta.x));
+		}
 
 		mouseX = x;
 		mouseY = y;
+
+		updateView();
 	}
 	else{
 		cmp_bar += delta.x;
@@ -1415,7 +1793,11 @@ void onMouseMotion(int x, int y)
 
 void My_Mouse(int button, int state, int x, int y)
 {
-	if(state == GLUT_DOWN)
+	//Edit , new dx, dz
+	float dx = 0;
+	float dz = 0;
+	//////////Edit!! : button == 0
+	if (button == 0 && state == GLUT_DOWN)
 	{
 		if(control_signal == 5){
 			mPos[0] = x;
@@ -1429,22 +1811,66 @@ void My_Mouse(int button, int state, int x, int y)
 		mouseY = y;
 		if(x<=cmp_bar+10 && x>=cmp_bar-10)
 			pressCmpBar = true;
+
 		if(gameMode == START_MENU)
 		{
+			gameUI.mapPress = 0;
+			gameUI.setPress = 0;
 			if(x>=350 && x<=650 && y>=500 && y<=600) gameMode = GAME_MODE;
 			else if(x>=350 && x<=650 && y>=625 && y<=720) gameMode = VIEW_MODE;
+		}
+		else if(gameMode == GAME_MODE || gameMode == VIEW_MODE)
+		{
+			if((pow((x-62.5),2) + pow((y-812.5),2)) <= 1407) gameMode = START_MENU; //START MENU
+			else if((pow((x-162.5),2) + pow((y-812.5),2)) <= 1407){ //MAP
+				gameUI.mapPress = 1 - gameUI.mapPress;
+				gameUI.setPress = 0;
+			}
+			else if((pow((x-262.5),2) + pow((y-812.5),2)) <= 1407){ //SETTINGS
+				gameUI.mapPress = 0;
+				gameUI.setPress = 1 - gameUI.setPress;
+			}
+			else if(x>325 || y<300){ //SETING LIST
+				gameUI.mapPress = 0;
+				gameUI.setPress = 0;
+			}
+			else{ //DEBUG
+				//gameUI.mapPress = 0;
+				//gameUI.setPress = 0;
+			}
 		}
 		/*else{
 			gameMode = START_MENU;
 		}*/
 		
 	}
-	else if(state == GLUT_UP)
+	//////////Edit!! : button == 0
+	else if (button == 0 && state == GLUT_UP)
 	{
 		printf("Mouse %d is released at (%d, %d)\n", button, x, y);
 		isPress = false;
 		pressCmpBar = false;
 	}
+	//////////////Edit, in camera mode , zoom in and zoom out
+	else if (button == 3){
+		//zoom out 
+		camera.setZoom(-2);
+		printf("camera.distance:%f\n", camera.distanceFromPlayer);
+	}
+	else if (button == 4){
+		//zoom in 
+		camera.setZoom(2);
+		printf("camera.distance:%f\n", camera.distanceFromPlayer);
+	}
+	//////////////////
+	mat4 mat = viewMatrix;
+
+	vec3 forward(mat[0][2], mat[1][2], mat[2][2]);
+	vec3 strafe(mat[0][0], mat[1][0], mat[2][0]);
+
+	const float speed = 1.6f;//how fast we move
+	eyeVector.z += dz*speed;
+	updateView();
 }
 
 void My_Keyboard(unsigned char key, int x, int y)
@@ -1454,6 +1880,74 @@ void My_Keyboard(unsigned char key, int x, int y)
 	float dz = 0;
 	switch (key)
 	{
+		case '8':
+		{
+					camera.angleAroundPlayer -= 3.0f;
+					camera.yaw += 3.0f;
+					break;
+		}
+			////////////////////////////////For moderate: camera turn right
+		case '9':
+		{
+					camera.angleAroundPlayer += 3.0f;
+					camera.yaw -= 3.0f;
+					break;
+		}
+			////////////////////////////////For Debug: show the eyeVector coordinate
+		case 'p':
+		{
+					printf("eyevector:(%f, %f, %f)\n", eyeVector.x, eyeVector.y, eyeVector.z);
+					printf("roll:%f, pitch:%f, yaw:%f\n", mroll, mpitch, myaw);
+					break;
+		}
+			////////////////////////////////For Debug: show the camera coordinate
+		case '[':
+		{
+					printf("camera.position:(%f, %f, %f)\n", camera.position.x, camera.position.y, camera.position.z);
+					printf("roll:%f, pitch:%f, yaw:%f\n", radians(camera.roll), radians(camera.pitch), radians(camera.yaw));
+					puts("----------------------------------------------------------------------");
+					break;
+		}
+			////////////////////////////////For Debug: show the player coordinate
+		case ']':
+		{
+					//player position
+					printf("player.position:(%f, %f, %f)\n", player.position.x, player.position.y, player.position.z);
+					break;
+		}
+			////////////////////////////////Edit: change to view  mode
+		case '2':
+		{
+					camera.mode3D = 0;
+					break;
+		}
+			////////////////////////////////Edit: change to 3rd person perspective mode
+		case '3':
+		{
+					// 3rd perspective
+					if (camera.mode3D != 3){
+						camera.angleAroundPlayer = 0;
+						camera.yaw = 363;
+						camera.mode3D = 3;
+						camera.move();
+						updateView();
+					}
+					break;
+		}
+			////////////////////////////////Edit: change to 1rd person perspective mode
+		case '1':
+		{
+					//1st perspective
+
+					if (camera.mode3D != 1){
+						camera.angleAroundPlayer = 0;
+						camera.yaw = 363;
+						camera.mode3D = 1;
+						camera.move();
+						updateView();
+					}
+					break;
+		}
 		case 'w':
 			{
 			  dz = -2;
@@ -1533,6 +2027,9 @@ void My_Keyboard(unsigned char key, int x, int y)
 		case 'b':
 			terrain.toggle_enable_wireframe();
 			break;
+		case ',':
+			trigger_lighting = !trigger_lighting;
+			break;
 	   default:
 		 break;
 	 }
@@ -1551,6 +2048,8 @@ void My_Keyboard(unsigned char key, int x, int y)
 
 void My_SpecialKeys(int key, int x, int y)
 {
+	float dx = 0;
+	float dz = 0;
 	switch(key)
 	{
 	case GLUT_KEY_F1:
@@ -1559,13 +2058,48 @@ void My_SpecialKeys(int key, int x, int y)
 	case GLUT_KEY_PAGE_UP:
 		printf("Page up is pressed at (%d, %d)\n", x, y);
 		break;
+	case GLUT_KEY_UP:
+		player.updatePosition(vec3(0.0, 0.0, -3.0), 0.0f);
+		camera.move();
+		printf("up is pressed at (%d, %d)\n", x, y);
+		break;
+		////////////////////Edit  : move backward
+	case GLUT_KEY_DOWN:
+		player.updatePosition(vec3(0.0, 0.0, 3.0), 180.0f);
+		//dz = 2;
+		camera.move();
+		printf("Down arrow is pressed at (%d, %d)\n", x, y);
+		break;
+		////////////////////Edit  : move to left
 	case GLUT_KEY_LEFT:
+		player.updatePosition(vec3(-3.0, 0.0, 0.0), -90.0f);
+		//dx = 2;
+		camera.move();
 		printf("Left arrow is pressed at (%d, %d)\n", x, y);
+		break;
+
+		////////////////////Edit  : move to right
+	case GLUT_KEY_RIGHT:
+		player.updatePosition(vec3(3.0, 0.0, 0.0), 90.0f);
+		//dx = -2;
+		camera.move();
+		printf("right arrow is pressed at (%d, %d)\n", x, y);
 		break;
 	default:
 		printf("Other special key is pressed at (%d, %d)\n", x, y);
 		break;
 	}
+	mat4 mat = viewMatrix;
+
+	vec3 forward(mat[0][2], mat[1][2], mat[2][2]);
+	vec3 strafe(mat[0][0], mat[1][0], mat[2][0]);
+
+	const float speed = 1.6f;//how fast we move
+
+
+	eyeVector += (-dz * forward + dx * strafe) * speed;
+
+	updateView();
 }
 
 void My_Menu(int id)

@@ -1,4 +1,6 @@
 #version 410 core                                                          
+
+in float visibility;
                                                                            
 out vec4 color;                                                            
                                                                            
@@ -33,10 +35,12 @@ void main(void)
                                                                            
     if (enable_fog)                                                        
     {                                                                      
-        color = fog(landscape);                                            
+        color = vec4(landscape.rgb, 1.0);  
+		color = mix(vec4(0.82, 0.88, 0.9,1.0),color,visibility);                                            
     }                                                                      
     else                                                                   
     {                                                                      
-        color = vec4(landscape.rgb, 1.0);                                                 
+        color = vec4(landscape.rgb, 1.0);  
+		//color = mix(vec4(0.82, 0.88, 0.9,1.0),color,visibility);                                                       
     }                                                                      
 }                                                                          

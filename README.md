@@ -37,3 +37,7 @@
 - create player class
 - 修好water reflection
 - 調整一下開始畫面
+
+**6/12**
+- 建好shadow
+- merge好fog
