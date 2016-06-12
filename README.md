@@ -51,6 +51,7 @@
     2. F2 fog 開關
     3. F3 shadow 開關
 - 新增訓練家水中倒影與影子
-- 更新模組包：https://drive.google.com/file/d/0B512lwbc5_ZFcWtZc0dxcXo4UkE/view?usp=sharing
+- 新增水的normal map
+- 更新模組包：https://drive.google.com/file/d/0B512lwbc5_ZFdUJFY0phSTNzSG8/view?usp=sharing
 
 

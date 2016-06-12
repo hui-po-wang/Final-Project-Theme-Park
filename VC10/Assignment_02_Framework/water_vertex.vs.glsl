@@ -12,6 +12,7 @@ uniform vec3 cameraPosition;
 out vec4 clipSpace;
 out vec2 texCoord;
 out vec3 toCameraVector;
+out vec3 vv3vertex;
 
 out float visibility;
 
@@ -32,4 +33,6 @@ void main()
 	float dis = length(posToCam.xyz);
 	visibility = exp(-pow((dis*density),grad));
 	visibility = clamp(visibility,0.3,1.0);
+	
+	vv3vertex = iv3vertex;
 }

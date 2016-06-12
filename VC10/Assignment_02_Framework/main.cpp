@@ -718,7 +718,7 @@ class WaterRendering{
 		GLuint reflectionDepthrbo, refractionDepthrbo;
 		GLuint program;
 		GLuint window_vertex_buffer;
-		GLuint reflectionFboDataTexture, refractionFboDataTexture, dudvMapTexture;
+		GLuint reflectionFboDataTexture, refractionFboDataTexture, dudvMapTexture, normalMapTexture;
 		float moveFactor;
 		void init(){
 			moveFactor = 0;
@@ -796,6 +796,22 @@ class WaterRendering{
 			//glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, envmap_data.width, envmap_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, envmap_data.data );
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, map_data.width, map_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, map_data.data);
 			delete[] map_data.data;
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT );
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT );
+
+			// normal map
+			glGenTextures(1, &this->normalMapTexture);
+			glBindTexture(GL_TEXTURE_2D, this->normalMapTexture);
+
+			printf("load Maps/normalMap.png\n");
+			//texture_data map_data = load_png("Maps/waterDUDV.png");
+			texture_data normal_data = load_png("Maps/normalMap.png");
+			//glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, envmap_data.width, envmap_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, envmap_data.data );
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, normal_data.width, normal_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, normal_data.data);
+			delete[] normal_data.data;
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -1680,6 +1696,11 @@ void My_Display()
 	glUniform1i(texLoc, 2);
 	glBindTexture( GL_TEXTURE_2D, waterRendering.dudvMapTexture);
 
+	glActiveTexture(GL_TEXTURE3);
+	texLoc  = glGetUniformLocation(waterRendering.program, "normalMap");
+	glUniform1i(texLoc, 3);
+	glBindTexture( GL_TEXTURE_2D, waterRendering.normalMapTexture);
+
 	int f = glutGet(GLUT_ELAPSED_TIME);
 	if(timer_cnt % 9 == 0 ){
 		waterRendering.moveFactor += 0.0003 * f * 0.001f;
@@ -1691,6 +1712,7 @@ void My_Display()
 	glUniformMatrix4fv(glGetUniformLocation(waterRendering.program, "proj_matrix"), 1, GL_FALSE, value_ptr(P));
 	glUniform3fv(glGetUniformLocation(waterRendering.program, "cameraPosition"), 1, &eyeVector[0]);
 	glUniform1f(glGetUniformLocation(waterRendering.program, "moveFactor"), waterRendering.moveFactor);
+	glUniform1i(glGetUniformLocation(waterRendering.program, "trigger_lighting"), trigger_lighting);
 	glDrawArrays(GL_TRIANGLES,0,6 );
 
 	if(gameMode == START_MENU)
