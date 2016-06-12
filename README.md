@@ -38,6 +38,18 @@
 - 修好water reflection
 - 調整一下開始畫面
 
+**6/12 -- by Scoly**
+- 加上了fog
+- 加上了setting list
+- 更新模組包 ： https://drive.google.com/file/d/0Bx6pSZs1eFGPeDQtWlNMQ0ozQVE/view?usp=sharing
+
 **6/12**
 - 建好shadow
 - merge好fog
+- 新增控制鍵
+    1. F1 lighting 開關
+    2. F2 fog 開關
+    3. F3 shadow 開關
+- 新增訓練家水中倒影與影子
+
+

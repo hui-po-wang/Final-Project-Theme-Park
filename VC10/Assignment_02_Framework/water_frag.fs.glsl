@@ -4,6 +4,7 @@
 in vec4 clipSpace;
 in vec2 texCoord;
 in vec3 toCameraVector;
+in float visibility;
 
 uniform sampler2D reflectionTex;
 uniform sampler2D refractionTex;
@@ -19,11 +20,12 @@ void main(){
 	vec2 refractionTexCoord = vec2(ndc.x, ndc.y);
 	vec2 reflectionTexCoord = vec2(ndc.x, -(ndc.y));
 	
-	//vec2 distortion1 = (texture(dudvMap, vec2(texCoord.x + moveFactor*0.5, texCoord.y)).rg * 2.0 - 1.0) * waveStrength;
-	//vec2 distortion2 = (texture(dudvMap, vec2(-texCoord.x + moveFactor*0.5, texCoord.y + moveFactor*0.5)).rg * 2.0 - 1.0) * waveStrength;
-	vec2 distortion1 = (texture(dudvMap, vec2(ndc.x + moveFactor, ndc.y)).rg * 2.0 - 1.0) * waveStrength;
-	vec2 distortion2 = (texture(dudvMap, vec2(-ndc.x + moveFactor, ndc.y + moveFactor)).rg * 2.0 - 1.0) * waveStrength;
-	vec2 totaldistortion = distortion1 + distortion2;
+	//vec2 distortion1 = (texture(dudvMap, vec2(ndc.x + moveFactor, ndc.y)).rg * 2.0 - 1.0) * waveStrength;
+	//vec2 distortion2 = (texture(dudvMap, vec2(-ndc.x + moveFactor, ndc.y + moveFactor)).rg * 2.0 - 1.0) * waveStrength;
+	//vec2 totaldistortion = distortion1 + distortion2;
+	vec2 distortedTexcoord = texture(dudvMap, vec2(ndc.x + moveFactor, ndc.y)).rg * 0.1;
+	distortedTexcoord = ndc + vec2(distortedTexcoord.x, distortedTexcoord.y + moveFactor);
+	vec2 totaldistortion = (texture(dudvMap, distortedTexcoord).rg * 2.0 - 1.0) * waveStrength;
 
 	refractionTexCoord += totaldistortion;
 	refractionTexCoord = clamp(refractionTexCoord, 0.001, 0.999);

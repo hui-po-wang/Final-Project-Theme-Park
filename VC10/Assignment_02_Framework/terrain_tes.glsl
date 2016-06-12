@@ -47,4 +47,5 @@ void main(void)
 	float dis = length(posToCam.xyz);
 	visibility = exp(-pow((dis*density),grad));
 	visibility = clamp(visibility,0.3,1.0);                                        
+
 }                                                                              

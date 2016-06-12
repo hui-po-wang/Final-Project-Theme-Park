@@ -22,8 +22,8 @@
 #define MENU_ANI_FURY 6
 #define SHADOW_MAP_SIZE 4096
 
-const int window_width = 800;
-const int window_height = 800;
+const int window_width = 1000;
+const int window_height = 1000;
 
 GLubyte timer_cnt = 0;
 bool timer_enabled = true;
@@ -59,6 +59,8 @@ float getDegree(float rad){
  *
  */
 bool trigger_lighting = true;
+bool trigger_fog = true;
+bool trigger_shadow = true;
 
 GLfloat mPos[2];
 typedef struct _texture_data
@@ -227,6 +229,7 @@ class SkyBox{
 			glBindTexture(GL_TEXTURE_CUBE_MAP, this->env_tex);
 
 			glUniformMatrix4fv(this->um4mvp, 1, GL_FALSE, value_ptr(mvp));
+			glUniform1i(glGetUniformLocation(this->program, "trigger_fog"), trigger_fog);
 			glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, 0);
 			
 			/*glDisable(GL_DEPTH_TEST);
@@ -592,6 +595,7 @@ class Terrain{
 			this->loc_enable_fog = glGetUniformLocation(this->program, "enable_fog");
 			this->loc_tex_color = glGetUniformLocation(this->program, "tex_color");
 			this->loc_m_matrix = glGetUniformLocation(this->program, "m_matrix");
+			this->loc_v_matrix = glGetUniformLocation(this->program, "v_matrix");
 
 			this->dmap_depth = 307.0f;
 
@@ -630,7 +634,7 @@ class Terrain{
 			this->enable_fog = true;
 
 		}
-		void draw(mat4& M, mat4& V, mat4& P){
+		void draw(mat4& M, mat4& V, mat4& P, bool trigger_fog){
 			glEnable(GL_CULL_FACE);
 			static const GLfloat black[] = { 0.85f, 0.95f, 1.0f, 1.0f };
 			static const GLfloat one = 1.0f;
@@ -666,7 +670,7 @@ class Terrain{
 			glUniformMatrix4fv(this->loc_proj_matrix, 1, GL_FALSE, value_ptr(proj_matrix));
 			glUniformMatrix4fv(this->loc_mvp_matrix, 1, GL_FALSE, value_ptr(proj_matrix * mv_matrix));
 			glUniform1f(this->loc_dmap_depth, this->enable_displacement ? this->dmap_depth : 0.0f);
-			glUniform1i(this->loc_enable_fog, this->enable_fog ? 1 : 0);
+			glUniform1i(this->loc_enable_fog, trigger_fog ? 1 : 0);
 			glUniform1i(this->loc_tex_color, 1);
 
 
@@ -787,7 +791,8 @@ class WaterRendering{
 			glBindTexture(GL_TEXTURE_2D, this->dudvMapTexture);
 
 			printf("load Maps/waterDUDV.png\n");
-			texture_data map_data = load_png("Maps/waterDUDV.png");
+			//texture_data map_data = load_png("Maps/waterDUDV.png");
+			texture_data map_data = load_png("Maps/new_waterDUDV.png");
 			//glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, envmap_data.width, envmap_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, envmap_data.data );
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, map_data.width, map_data.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, map_data.data);
 			delete[] map_data.data;
@@ -931,6 +936,7 @@ class GameUI{
 
 };
 GameUI gameUI;
+
 class Shadow{
 	public:
 		GLuint fbo;
@@ -985,6 +991,7 @@ class Shadow{
 
 		}
 };
+
 Shadow shadow;
 class Player{
 	public:
@@ -1048,13 +1055,14 @@ class Player{
 				glBindVertexArray (this->playerAnimation[animationState].scene.shapes[i].vao);
 				mat4 mvp1 = proj_matrix *
 					viewMatrix *
-					this->model_matrix ;
+					translate(mat4(),vec3(-300,70,-180))*scale(mat4(),vec3(4.0f,8.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));
 				
 				glUniformMatrix4fv(glGetUniformLocation(program, "um4mvp"), 1, GL_FALSE, value_ptr(mvp1));
 				glUniformMatrix4fv(glGetUniformLocation(program, "M"), 1, GL_FALSE, value_ptr(this->model_matrix));
 				glUniformMatrix4fv(glGetUniformLocation(program, "V"), 1, GL_FALSE, value_ptr(viewMatrix));
 				glUniformMatrix4fv(glGetUniformLocation(program, "P"), 1, GL_FALSE, value_ptr(this->proj_matrix));
 				glUniform1i(glGetUniformLocation(program, "trigger_lighting"), isLighting);
+				glUniform1i(glGetUniformLocation(program, "trigger_shadow"), trigger_shadow);
 
 				glBindTexture(GL_TEXTURE_2D,this->playerAnimation[animationState].scene.material_ids[this->playerAnimation[animationState].scene.shapes[i].mid]);
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->playerAnimation[animationState].scene.shapes[i].iBuffer);
@@ -1444,18 +1452,20 @@ void My_LoadModels()
 	// load the landscape
 	loadOBJ(scene, "Habitat.obj");
 
-	//player.loadContent();
+	player.loadContent();
 	/*for(int k=0;k<3;k++){
 		loadFBX(zombie[k], zombie_filename[k]);
 	}*/
 }
-void drawOBJ(GLuint programForDraw, Scene& scene, mat4& mvp, mat4& M, mat4& V, mat4& P, vec4& plane_equation, bool isLighting){
+
+void drawOBJ(GLuint programForDraw, Scene& scene, mat4& mvp, mat4& M, mat4& V, mat4& P, vec4& plane_equation, bool isLighting, bool isFog, bool isShadow){
 	glUseProgram(programForDraw);
 	//printf("program inside : %u\n", programForDraw);
 	for(int i = 0; i < scene.shapeCount; i++)
 	{
 
 		glBindVertexArray (scene.shapes[i].vao);
+
 		glUniformMatrix4fv(glGetUniformLocation(programForDraw, "um4mvp"), 1, GL_FALSE, value_ptr(mvp));
 		glUniformMatrix4fv(glGetUniformLocation(programForDraw, "M"), 1, GL_FALSE, value_ptr(M));
 		glUniformMatrix4fv(glGetUniformLocation(programForDraw, "V"), 1, GL_FALSE, value_ptr(V));
@@ -1463,6 +1473,8 @@ void drawOBJ(GLuint programForDraw, Scene& scene, mat4& mvp, mat4& M, mat4& V, m
 		glUniform4fv(glGetUniformLocation(programForDraw, "plane"), 1, &plane_equation[0]);
 		glUniform3fv(glGetUniformLocation(programForDraw, "camera_position"), 1, &eyeVector[0]);
 		glUniform1i(glGetUniformLocation(programForDraw, "trigger_lighting"), isLighting);
+		glUniform1i(glGetUniformLocation(programForDraw, "trigger_fog"), isFog);
+		glUniform1i(glGetUniformLocation(programForDraw, "trigger_shadow"), isShadow);
 
 		// abandoned codes which used to draw scnens with only material_ids[0]
 		/*glBindTexture(GL_TEXTURE_2D,scene.material_ids[scene.shapes[i].mid]);
@@ -1519,7 +1531,7 @@ void My_Display()
 		glBufferData(GL_ARRAY_BUFFER, new_shapes[i].mesh.positions.size() * sizeof(float), 
 					&new_shapes[i].mesh.positions[0], GL_STATIC_DRAW);
 	}*/
-	//player.updateContent();
+	player.updateContent();
 
 
 	glUseProgram(program);
@@ -1537,7 +1549,7 @@ void My_Display()
 	//glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
 	glDrawBuffer( GL_COLOR_ATTACHMENT0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	drawOBJ(program, scene, mvp, M, viewMatrix, P, vec4(0, -1, 0, water_height), 0);
+	drawOBJ(program, scene, mvp, M, viewMatrix, P, vec4(0, -1, 0, water_height), 0, 0, 0);
 	//drawOBJ(scene, mvp, M, vec4(0, 1, 0, -1000000));
 
 
@@ -1554,7 +1566,8 @@ void My_Display()
 	//glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0);
 	glDrawBuffer( GL_COLOR_ATTACHMENT0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	drawOBJ(program, scene, mvp, M, water_viewMatrix, P, vec4(0, 1, 0, -water_height), 0);
+	player.draw(0);
+	drawOBJ(program, scene, mvp, M, water_viewMatrix, P, vec4(0, 1, 0, -water_height), 0, 0, 0);
 	//drawOBJ(scene, mvp, M, vec4(0, 0, 0, 1000000), 0);
 	mpitch = -mpitch;
 	eyeVector.y -= camera_distance;
@@ -1616,7 +1629,8 @@ void My_Display()
 		glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
 		glEnable(GL_POLYGON_OFFSET_FILL);
 		glPolygonOffset(4.0f, 4.0f);
-		drawOBJ(shadow.program, scene, light_vp_matrix * M, M, light_view_matrix, light_proj_matrix, vec4(0, 0, 0, 1000000), trigger_lighting);
+		player.draw(0);
+		drawOBJ(shadow.program, scene, light_vp_matrix * M, M, light_view_matrix, light_proj_matrix, vec4(0, 0, 0, 1000000), trigger_lighting, 0, 0);
 		glDisable(GL_POLYGON_OFFSET_FILL);
 	
 	// draw city
@@ -1632,11 +1646,12 @@ void My_Display()
 	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	mat4 shadow_matrix = shadow_sbpv_matrix * M;
 	glUniformMatrix4fv(glGetUniformLocation(program, "shadow_matrix"), 1, GL_FALSE, value_ptr(shadow_matrix));
-	drawOBJ(program, scene, mvp, M, viewMatrix, P, vec4(0, 0, 0, 1000000), trigger_lighting);
+	drawOBJ(program, scene, mvp, M, viewMatrix, P, vec4(0, 0, 0, 1000000), trigger_lighting, trigger_fog, trigger_shadow);
+
 
 	// draw terrian
 	M = mat4();
-	terrain.draw(M, viewMatrix, P);
+	terrain.draw(M, viewMatrix, P, trigger_fog);
 
 	// draw water
 	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(),vec3(0,-90,0));
@@ -1695,7 +1710,7 @@ void My_Display()
 	}
 
 	glUseProgram(program);
-	//player.draw(trigger_lighting);
+	player.draw(trigger_lighting);
 
 	/*glUseProgram(program);
 	// draw the zombie
@@ -1830,7 +1845,8 @@ void My_Mouse(int button, int state, int x, int y)
 				gameUI.mapPress = 0;
 				gameUI.setPress = 1 - gameUI.setPress;
 			}
-			else if(x>325 || y<300){ //SETING LIST
+			else if(gameUI.setPress && (x>325 || y<300)){ //SETING LIST
+
 				gameUI.mapPress = 0;
 				gameUI.setPress = 0;
 			}
@@ -2027,9 +2043,6 @@ void My_Keyboard(unsigned char key, int x, int y)
 		case 'b':
 			terrain.toggle_enable_wireframe();
 			break;
-		case ',':
-			trigger_lighting = !trigger_lighting;
-			break;
 	   default:
 		 break;
 	 }
@@ -2053,7 +2066,16 @@ void My_SpecialKeys(int key, int x, int y)
 	switch(key)
 	{
 	case GLUT_KEY_F1:
-		printf("F1 is pressed at (%d, %d)\n", x, y);
+		//printf("F1 is pressed at (%d, %d)\n", x, y);
+		trigger_lighting = !trigger_lighting;
+		break;
+	case GLUT_KEY_F2:
+		//printf("F1 is pressed at (%d, %d)\n", x, y);
+		trigger_fog = !trigger_fog;
+		break;
+	case GLUT_KEY_F3:
+		//printf("F1 is pressed at (%d, %d)\n", x, y);
+		trigger_shadow = !trigger_shadow;
 		break;
 	case GLUT_KEY_PAGE_UP:
 		printf("Page up is pressed at (%d, %d)\n", x, y);

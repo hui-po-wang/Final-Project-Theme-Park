@@ -4,7 +4,6 @@ in vec4 shadow_coord;
 in vec3 vv3color;
 in vec3 vv3vertex;
 in vec2 vv2texcoord;
-
 in float visibility;
 
 uniform sampler2D s;
@@ -13,6 +12,8 @@ uniform sampler2D shadow_tex;
 uniform vec3 camera_position;
 uniform vec4 plane;
 uniform int trigger_lighting;
+uniform int trigger_fog;
+uniform int trigger_shadow;
 
 uniform mat4 M;
 uniform mat4 V;
@@ -62,17 +63,22 @@ vec4 lighting(){
 	vec3 diffuse = diffuseCoefficient * vec3(1, 1, 1) * vec3(0.9, 0.9, 0.9);
 	vec3 specular = specularCoefficient * vec3(1, 1, 1) * vec3(0.3, 0.3, 0.3);
 	
-	float bias = 0.1;
-	float dt = 1.0f;
-	if(texture(shadow_tex, shadow_coord.xy/shadow_coord.w).r < shadow_coord.z/shadow_coord.w - bias){
-		dt = 0.0f;
-	}
+	if(trigger_shadow == 1){
+		float bias = 0.1;
+		float dt = 1.0f;
+		if(texture(shadow_tex, shadow_coord.xy/shadow_coord.w).r < shadow_coord.z/shadow_coord.w - bias){
+			dt = 0.0f;
+		}
 
-	if(dt == 0){
-		resultLighting += vec4(ambient -vec3(0.2, 0.2, 0.2) +  dt * attenuation*(diffuse + specular),0);
+		if(dt == 0){
+			resultLighting += vec4(ambient -vec3(0.2, 0.2, 0.2) +  dt * attenuation*(diffuse + specular),0);
+		}
+		else{
+			resultLighting += vec4(ambient +  dt * attenuation*(diffuse + specular),0);
+		}
 	}
 	else{
-		resultLighting += vec4(ambient +  dt * attenuation*(diffuse + specular),0);
+		resultLighting += vec4(ambient + attenuation*(diffuse + specular),0);
 	}
 	
 	return resultLighting;
@@ -88,13 +94,15 @@ void main()
 	else{
 		if(trigger_lighting == 0){
 			fragColor = vec4(diffuseColor.rgb, 1.0) ;
-			fragColor = mix(vec4(0.82, 0.88, 0.9,1.0),fragColor,visibility);
+			//fragColor = mix(vec4(0.82, 0.88, 0.9,1.0),fragColor,visibility);
 		}
 		else{
-			vec3 projCoords = shadow_coord.xyz / shadow_coord.w;
 			fragColor = vec4(diffuseColor.rgb, 1.0) * lighting();
-			fragColor = mix(vec4(0.82, 0.88, 0.9,1.0),fragColor,visibility);
+			//fragColor = mix(vec4(0.82, 0.88, 0.9,1.0),fragColor,visibility);
+		}
 
+		if(trigger_fog == 1){
+			fragColor = mix(vec4(0.82, 0.88, 0.9,1.0),fragColor,visibility);
 		}
 	}
 
