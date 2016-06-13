@@ -20,14 +20,14 @@
 #define MENU_ANI_DEAD 4
 #define MENU_ANI_WALK 5
 #define MENU_ANI_FURY 6
-#define SHADOW_MAP_SIZE 4096
+#define SHADOW_MAP_SIZE 8192
 //***
 #define STAND 1
 #define FACE_DOWN 2
 #define POKEMON_NUM 12
 
-const int window_width = 600;
-const int window_height = 600;
+const int window_width = 1000;
+const int window_height = 1000;
 
 GLubyte timer_cnt = 0;
 bool timer_enabled = true;
@@ -855,6 +855,9 @@ class Player{
 		vec3 scale_v;
 		bool isShow;
 		int rotateType; //1->stand, 2->face down
+
+		vec3 forward_direction;
+
 		void loadContent(){
 			this->rotateType = FACE_DOWN;
 			loadFBX(playerAnimation[0], "Pokemon/trainerStand.fbx");
@@ -874,6 +877,8 @@ class Player{
 			this->isShow = true;
 			this->scale_v = vec3(4.0f, 4.0f, 4.0f);
 
+			this->forward_direction = vec3(0, 0, 1);
+
 			//this->model_matrix = translate(mat4(),vec3(-800,50,-180))*scale(mat4(),vec3(4.0f,8.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));
 			this->model_matrix = translate(mat4(), t_position)
 				*scale(mat4(), scale_v)
@@ -881,7 +886,7 @@ class Player{
 				*rotate(mat4(), radians(-90.0f), vec3(1, 0, 0));
 
 
-			this->proj_matrix = perspective(radians(60.0f), 1.0f, 0.3f, 10000.0f);
+			this->proj_matrix = perspective(radians(60.0f), 1.0f, 0.3f, 100000.0f);
 		}
 		void loadContent(char* name, int id, char* path, vec3 position, vec3 t_position, vec3 scale_v, int rotateType){
 			this->name = name;
@@ -915,31 +920,43 @@ class Player{
 					*rotate(mat4(), radians(180.0f), vec3(0, 0, 1))
 					*rotate(mat4(), radians(90.0f), vec3(1, 0, 0));
 			}
-			else if (this->rotateType == STAND)				//stand
+			else if (this->rotateType == STAND){				//stand
 				this->model_matrix = translate(mat4(), t_position)
 				*scale(mat4(), scale_v)
-				*rotate(mat4(), radians(180.0f), vec3(0, 0, 1))
-				*rotate(mat4(), radians(180.0f), vec3(1, 0, 0));
-
-			else if (this->rotateType == FACE_DOWN)			//face down
+				//last
+				*scale(mat4(), scale_v);
+			}
+			else if (this->rotateType == FACE_DOWN){			//face down
 				this->model_matrix = translate(mat4(), t_position)
 				*scale(mat4(), scale_v)
-				*rotate(mat4(), radians(180.0f), vec3(0, 0, 1))
-				*rotate(mat4(), radians(-90.0f), vec3(1, 0, 0));
+				//last
+				*rotate(mat4(), radians(90.0f), vec3(1, 0, 0));
+			}
 
-			this->proj_matrix = perspective(radians(60.0f), 1.0f, 0.3f, 10000.0f);
+			this->proj_matrix = perspective(radians(60.0f), 1.0f, 0.3f, 100000.0f);
 		}
 
-		void updatePosition(vec3 dv, float angle){
-			position -= dv;
-			this->t_position += dv;
-			this->turn = angle;
+		void updatePosition(float dv, float angle){
+
+			//position -= dv;
+			//this->t_position += dv;
+			
 			if (this->id == 0){
+				if(dv != 0){
+					position -= dv * this->forward_direction;
+					this->t_position += dv * this->forward_direction;
+				}
+				else{
+					this->turn = (this->turn + angle);
+					if(this->turn >= 360.0f) this->turn -= 360;
+					else if(this->turn <= 0.0f) this->turn += 360;
+					this->forward_direction = normalize(rotate(mat4(), radians(this->turn), vec3(0, -1, 0)) * vec4(0, 0, 1, 0.0)).xyz;
+				}
 				this->model_matrix = translate(mat4(), t_position)
-					*scale(mat4(), scale_v)
-					*rotate(mat4(), radians(180.0f), vec3(0, 0, 1))
-					*rotate(mat4(), radians(-90.0f), vec3(1, 0, 0))
-					*rotate(mat4(), radians(angle), vec3(0, 0, 1));
+						*rotate(mat4(), radians(turn), vec3(0, -1, 0))
+						*rotate(mat4(), radians(180.0f), vec3(0, 0, 1))
+						*rotate(mat4(), radians(-90.0f), vec3(1, 0, 0))
+						*scale(mat4(), scale_v);
 			}
 			else if (this->rotateType == STAND)				//stand
 				this->model_matrix = translate(mat4(), t_position)
@@ -979,6 +996,7 @@ class Player{
 					viewMatrix *
 					//****************************
 					this->model_matrix;
+					/*translate(mat4(),vec3(-80,50,-180))*scale(mat4(),vec3(4.0f,8.0f,4.0f))*rotate(mat4(),radians(180.0f),vec3(0,0,1))*rotate(mat4(),radians(-90.0f),vec3(1,0,0));*/
 
 
 
@@ -987,7 +1005,8 @@ class Player{
 				glUniformMatrix4fv(glGetUniformLocation(program, "V"), 1, GL_FALSE, value_ptr(viewMatrix));
 				glUniformMatrix4fv(glGetUniformLocation(program, "P"), 1, GL_FALSE, value_ptr(this->proj_matrix));
 				glUniform1i(glGetUniformLocation(program, "trigger_lighting"), isLighting);
-				glUniform1i(glGetUniformLocation(program, "trigger_shadow"), trigger_shadow);
+				glUniform1i(glGetUniformLocation(program, "trigger_shadow"), 0);
+				glUniform1i(glGetUniformLocation(program, "trigger_sampling"), 0);
 
 				glBindTexture(GL_TEXTURE_2D,this->playerAnimation[animationState].scene.material_ids[this->playerAnimation[animationState].scene.shapes[i].mid]);
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->playerAnimation[animationState].scene.shapes[i].iBuffer);
@@ -1017,6 +1036,23 @@ class Player{
 			this->isShow = true;
 			this->position = position;
 			this->t_position = position;
+			if (this->id == 11){
+				this->model_matrix = translate(mat4(), t_position)
+					*scale(mat4(), scale_v)
+					*rotate(mat4(), radians(180.0f), vec3(0, 0, 1))
+					*rotate(mat4(), radians(90.0f), vec3(1, 0, 0));
+			}
+			else if (this->rotateType == STAND)				//stand
+				this->model_matrix = translate(mat4(), t_position)
+				//last
+				*scale(mat4(), scale_v);
+
+			else if (this->rotateType == FACE_DOWN)			//face down
+				this->model_matrix = translate(mat4(), t_position)
+				*scale(mat4(), scale_v)
+				//last
+				*rotate(mat4(), radians(90.0f), vec3(1, 0, 0));
+
 		}
 
 };
@@ -1140,12 +1176,20 @@ public:
 		else if (mode3D == 1){
 			position.x = player->position.x;
 			position.z = player->position.z;// + 20.0f;
-			position.y = player->position.y;
+			//last
+			position.y = player->position.y - 10.0f;
 
 
 
-			angleAroundPlayer = -player->turn;
-			yaw = player->turn;
+			//last
+			if (player->turn == 90.0f || player->turn == -90.0f){
+				angleAroundPlayer = -player->turn;
+				yaw = player->turn;
+			}
+			else if (player->turn == 180.0f){
+				angleAroundPlayer = -player->turn;
+				yaw = player->turn;
+			}
 
 			printf("---------------------\n[2]player.position:(%f, %f, %f)\n", player->position.x, player->position.y, player->position.z);
 			printf("---------------------\n[2]player.yaw:%f, pitch: %f, angle:%f\n", this->yaw, this->pitch, this->angleAroundPlayer);
@@ -1658,7 +1702,7 @@ void updateView()
 	float angle = -2.5f ;
 	water_viewMatrix = matPitch/*rotate(mat4(), radians(angle)+mpitch, vec3(1.0f,0.0f,0.0f))*/ * matYaw * translate(mat4(1.0), vec3(eyeVector.x, eyeVector.y, eyeVector.z));
 	viewMatrix = rot *  trans;
-	viewMatrix_view = viewMatrix;
+
 	if (camera.getMod3D()){
 		camera.setPlayer(&player);
 		matRoll = mat4(1.0f);
@@ -1682,6 +1726,7 @@ void updateView()
 
 		
 	}
+	viewMatrix_view = viewMatrix;
 }
 void My_Init()
 {
@@ -1694,7 +1739,8 @@ void My_Init()
 	// initialize camera
 	camera.position = eyeVector;
 	camera.yaw = getDegree(myaw);
-	camera.pitch = getDegree(mpitch);
+	//last
+	camera.pitch = 34;
 	camera.roll = getDegree(mroll);
 	camera.setPlayer(&player);
 	camera.angleAroundPlayer = 0;
@@ -1869,6 +1915,9 @@ void My_LoadModels()
 	//->x     ^z
 
 
+	//last
+	vec3 big_scale = vec3(8);
+
 	position = vec3(-1000, -115, -1126); t_position = vec3(1000, 50, 1200);
 	pokemon[1].loadContent("seed_frog", 1, "Pokemon/001.fbx", position, t_position, vec3(6.0, 6.0, 6.0), STAND);
 
@@ -1894,18 +1943,18 @@ void My_LoadModels()
 	position = vec3(560, -115, -1516); t_position = vec3(-560, 50, 1590);
 	pokemon[8].loadContent("walk_grass", 8, "Pokemon/043.fbx", position, t_position, vec3(8.0, 8.0, 8.0), FACE_DOWN);
 
-	position = vec3(3200, -1079, 1993); t_position = vec3(-3200, 1014, -1920);
+	position = vec3(3200, -979, 1993); t_position = vec3(-3200, 914, -1920);
 	pokemon[9].loadContent("three_ground_mouse", 9, "Pokemon/051.fbx", position, t_position, vec3(6.0, 6.0, 6.0), FACE_DOWN);
 
 	position = vec3(-610, -135, -106); t_position = vec3(610, 70, 180);
 	pokemon[10].loadContent("stupid_duck", 10, "Pokemon/054.fbx", position, t_position, vec3(6.0, 6.0, 6.0), FACE_DOWN);
 
-	position = vec3(500, -115, -676); t_position = vec3(-500, 50, 750);
-	pokemon[11].loadContent("Kabe_monster", 11, "Pokemon/143.fbx", position, t_position, vec3(0.5, 0.5, 0.5), STAND);
+	position = vec3(410, -115, -676); t_position = vec3(-410, 50, 750);
+	pokemon[11].loadContent("Kabe_monster", 11, "Pokemon/143.fbx", position, t_position, vec3(1.0, 1.0, 1.0), STAND);
 
-	position = vec3(530, -115, 1333); t_position = vec3(-530, 50, -1260);
-	pokemon[12].loadContent("Meow_Meow", 12, "Pokemon/testMeow24.fbx", position, t_position, vec3(6.0, 6.0, 6.0), FACE_DOWN);
-	
+	position = vec3(500, -135, 1123); t_position = vec3(-500, 70, -1050);
+	pokemon[12].loadContent("Meow_Meow", 12, "Pokemon/testMeow24.fbx", position, t_position, big_scale, FACE_DOWN);
+	//-----	
 }
 
 void drawOBJ(GLuint programForDraw, Scene& scene, mat4& mvp, mat4& M, mat4& V, mat4& P, vec4& plane_equation, bool isLighting, bool isFog, bool isShadow){
@@ -1921,7 +1970,12 @@ void drawOBJ(GLuint programForDraw, Scene& scene, mat4& mvp, mat4& M, mat4& V, m
 		glUniformMatrix4fv(glGetUniformLocation(programForDraw, "V"), 1, GL_FALSE, value_ptr(V));
 		glUniformMatrix4fv(glGetUniformLocation(programForDraw, "P"), 1, GL_FALSE, value_ptr(P));
 		glUniform4fv(glGetUniformLocation(programForDraw, "plane"), 1, &plane_equation[0]);
-		glUniform3fv(glGetUniformLocation(programForDraw, "camera_position"), 1, &eyeVector[0]);
+		if(camera.getMod3D()){
+			glUniform3fv(glGetUniformLocation(programForDraw, "camera_position"), 1, &camera.position[0]);
+		}
+		else{
+			glUniform3fv(glGetUniformLocation(programForDraw, "camera_position"), 1, &eyeVector[0]);
+		}
 		glUniform1i(glGetUniformLocation(programForDraw, "trigger_lighting"), isLighting);
 		glUniform1i(glGetUniformLocation(programForDraw, "trigger_fog"), isFog);
 		glUniform1i(glGetUniformLocation(programForDraw, "trigger_shadow"), isShadow);
@@ -1981,7 +2035,7 @@ void My_Display()
 	//draw water refraction
 	glEnable(GL_CLIP_DISTANCE0);
 	float const water_height = 40;
-	float camera_distance = 2 * fabs(eyeVector.y - (water_height));
+	float camera_distance ;
 
 	updateView();
 	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(), vec3(0, -90, 0));
@@ -1997,8 +2051,16 @@ void My_Display()
 
 
 	// draw water reflection
-	eyeVector.y += camera_distance;
-	mpitch = -mpitch;
+	if(camera.getMod3D()){
+		camera_distance = 2 * fabs(camera.position.y - (water_height));
+		camera.position.y += camera_distance;
+		camera.pitch = -camera.pitch;
+	}
+	else{
+		camera_distance = 2 * fabs(eyeVector.y - (water_height));
+		eyeVector.y += camera_distance;
+		mpitch = -mpitch;
+	}
 	updateView();
 	glUseProgram(program);
 	M = scale(mat4(), vec3(5, 20, 5)) * scale(mat4(), vec3(1, 0.5, 1)) * translate(mat4(), vec3(0, -90, 0));
@@ -2020,8 +2082,15 @@ void My_Display()
 
 	drawOBJ(program, scene, mvp, M, water_viewMatrix, P, vec4(0, 1, 0, -water_height), 0, 0, 0);
 	//drawOBJ(scene, mvp, M, vec4(0, 0, 0, 1000000), 0);
-	mpitch = -mpitch;
-	eyeVector.y -= camera_distance;
+	if(camera.getMod3D()){
+		camera.pitch = -camera.pitch;
+		camera.position.y -= camera_distance;
+	}
+	else{
+		mpitch = -mpitch;
+		eyeVector.y -= camera_distance;
+	}
+	
 	updateView();
 
 	/*
@@ -2572,7 +2641,7 @@ void My_SpecialKeys(int key, int x, int y)
 {
 	float dx = 0;
 	float dz = 0;
-	float step = 30;
+	float step = 5;
 	switch(key)
 	{
 	case GLUT_KEY_F1:
@@ -2597,7 +2666,7 @@ void My_SpecialKeys(int key, int x, int y)
 	case GLUT_KEY_UP:
 
 		player.animationState = 1;
-		player.updatePosition(vec3(0.0, 0.0, -step), 0.0f);
+		player.updatePosition(-step, 0.0f);
 		camera.move();
 		//printf("up is pressed at (%d, %d)\n", x, y);
 		break;
@@ -2605,7 +2674,7 @@ void My_SpecialKeys(int key, int x, int y)
 	case GLUT_KEY_DOWN:
 
 		player.animationState = 1;
-		player.updatePosition(vec3(0.0, 0.0, step), 180.0f);
+		player.updatePosition(step, 180.0f);
 		//dz = 2;
 		camera.move();
 		//printf("Down arrow is pressed at (%d, %d)\n", x, y);
@@ -2614,7 +2683,7 @@ void My_SpecialKeys(int key, int x, int y)
 	case GLUT_KEY_LEFT:
 
 		player.animationState = 1;
-		player.updatePosition(vec3(-step, 0.0, 0.0), -90.0f);
+		player.updatePosition(0, -10.0f);
 		//dx = 2;
 		camera.move();
 		//printf("Left arrow is pressed at (%d, %d)\n", x, y);
@@ -2624,7 +2693,7 @@ void My_SpecialKeys(int key, int x, int y)
 	case GLUT_KEY_RIGHT:
 
 		player.animationState = 1;
-		player.updatePosition(vec3(step, 0.0, 0.0), 90.0f);
+		player.updatePosition(0, 10.0f);
 		//dx = -2;
 		camera.move();
 		//printf("right arrow is pressed at (%d, %d)\n", x, y);
