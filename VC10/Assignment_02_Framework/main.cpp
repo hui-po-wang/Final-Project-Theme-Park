@@ -2073,14 +2073,14 @@ void My_Display()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	//***fbx draw1 
+
+	drawOBJ(program, scene, mvp, M, water_viewMatrix, P, vec4(0, 1, 0, -water_height), 0, 0, 0);
+
 	player.draw(0);
 	for (int i = 1; i <= POKEMON_NUM; i++){
 		if (pokemon[i].isShow == true)
 			pokemon[i].draw(0);
 	}
-
-
-	drawOBJ(program, scene, mvp, M, water_viewMatrix, P, vec4(0, 1, 0, -water_height), 0, 0, 0);
 	//drawOBJ(scene, mvp, M, vec4(0, 0, 0, 1000000), 0);
 	if(camera.getMod3D()){
 		camera.pitch = -camera.pitch;
