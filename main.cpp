@@ -902,7 +902,7 @@ class Player{
 			this->t_position = t_position;
 
 
-			
+
 			this->id = id;
 			this->isShow = true;
 			this->scale_v = scale_v;
@@ -922,10 +922,9 @@ class Player{
 			}
 			else if (this->rotateType == STAND){				//stand
 				this->model_matrix = translate(mat4(), t_position)
-					//Fong change 2
 				*scale(mat4(), scale_v)
+				//last
 				*scale(mat4(), scale_v);
-				
 			}
 			else if (this->rotateType == FACE_DOWN){			//face down
 				this->model_matrix = translate(mat4(), t_position)
@@ -943,7 +942,6 @@ class Player{
 			//this->t_position += dv;
 			
 			if (this->id == 0){
-				
 				if(dv != 0){
 					position -= dv * this->forward_direction;
 					this->t_position += dv * this->forward_direction;
@@ -1092,7 +1090,6 @@ void catch_pokemon(){
 
 }
 void release_pokemon(int id){
-	printf("###########---id: %d, pokemon_bag[id]:%d----", id, pokemon_bag[id]);
 	if (id == -1){
 		for (int i = 1; i <= POKEMON_NUM; i++){
 			if (pokemon_bag[i] == 1){
@@ -1183,19 +1180,16 @@ public:
 			position.y = player->position.y - 10.0f;
 
 
-			//Fong change2
-			angleAroundPlayer = -player->turn;
-			yaw = player->turn;
 
-			//last Fong change
-			/*if (player->turn == 90.0f || player->turn == -90.0f){
+			//last
+			if (player->turn == 90.0f || player->turn == -90.0f){
 				angleAroundPlayer = -player->turn;
 				yaw = player->turn;
 			}
 			else if (player->turn == 180.0f){
 				angleAroundPlayer = -player->turn;
 				yaw = player->turn;
-			}*/
+			}
 
 			printf("---------------------\n[2]player.position:(%f, %f, %f)\n", player->position.x, player->position.y, player->position.z);
 			printf("---------------------\n[2]player.yaw:%f, pitch: %f, angle:%f\n", this->yaw, this->pitch, this->angleAroundPlayer);
@@ -1719,9 +1713,6 @@ void updateView()
 	water_viewMatrix = matPitch/*rotate(mat4(), radians(angle)+mpitch, vec3(1.0f,0.0f,0.0f))*/ * matYaw * translate(mat4(1.0), vec3(eyeVector.x, eyeVector.y, eyeVector.z));
 	viewMatrix = rot *  trans;
 
-
-
-	//player.isShow = true;
 	if (camera.getMod3D()){
 		camera.setPlayer(&player);
 		matRoll = mat4(1.0f);
@@ -2024,11 +2015,6 @@ void drawOBJ(GLuint programForDraw, Scene& scene, mat4& mvp, mat4& M, mat4& V, m
 // GLUT callback. Called to draw the scene.
 void My_Display()
 {
-	//Fong change2
-	if (camera.mode3D == 1)
-		player.isShow = false;
-	else 
-		player.isShow = true;
 	glActiveTexture(GL_TEXTURE0);
 	//glBindFramebuffer( GL_DRAW_FRAMEBUFFER,secondFrame.fbo);
 
@@ -2100,10 +2086,7 @@ void My_Display()
 
 	drawOBJ(program, scene, mvp, M, water_viewMatrix, P, vec4(0, 1, 0, -water_height), 0, 0, 0);
 
-
-	//Fong change2
-	if (player.isShow == true)
-		player.draw(0);
+	player.draw(0);
 	for (int i = 1; i <= POKEMON_NUM; i++){
 		if (pokemon[i].isShow == true)
 			pokemon[i].draw(0);
@@ -2178,9 +2161,7 @@ void My_Display()
 	glPolygonOffset(4.0f, 4.0f);
 
 	//fbx draw2
-	//Fong chang2
-	if (player.isShow)
-		player.draw(0);
+	player.draw(0);
 	for (int i = 1; i <= POKEMON_NUM; i++){
 		if (pokemon[i].isShow == true)
 			pokemon[i].draw(0);
@@ -2267,10 +2248,7 @@ void My_Display()
 
 	glUseProgram(program);
 	//***fbx draw3
-	//Fong change2
-	if (player.isShow)
-		player.draw(trigger_lighting);
-
+	player.draw(trigger_lighting);
 	for (int i = 1; i <= POKEMON_NUM; i++){
 		if (pokemon[i].isShow == true)
 			pokemon[i].draw(trigger_lighting);
@@ -2396,14 +2374,10 @@ void My_Mouse(int button, int state, int x, int y)
 			}
 			else if(x>=ConvertCoordx(-0.55) && x<=ConvertCoordx(-0.49) && y>=ConvertCoordy(-0.558) && y<=ConvertCoordy(-0.618)){//First
 				camera.mode3D=1;
-				//Fong change
-				camera.move();
 				updateView();
 			}
 			else if(x>=ConvertCoordx(-0.46) && x<=ConvertCoordx(-0.4) && y>=ConvertCoordy(-0.558) && y<=ConvertCoordy(-0.618)){//Third
 				camera.mode3D=3;
-				//Fong change
-				camera.move();
 				updateView();
 			}
 			else{ //DEBUG
@@ -2424,52 +2398,40 @@ void My_Mouse(int button, int state, int x, int y)
 			}
 			else if(gameUI.mapPress){
 				if(pokemon_bag[1] && (x>=ConvertCoordx(-0.85) && x<=ConvertCoordx(-0.57) && y>=ConvertCoordy(0.47) && y<=ConvertCoordy(0.19))){//001
-				//	pokemon_bag[1] = 0;
-					release_pokemon(1);
+					pokemon_bag[1] = 0;
 				}
 				else if(pokemon_bag[2] && (x>=ConvertCoordx(-0.45) && x<=ConvertCoordx(-0.17) && y>=ConvertCoordy(0.47) && y<=ConvertCoordy(0.19))){//002
-					//pokemon_bag[2] = 0;
-					release_pokemon(2);
+					pokemon_bag[2] = 0;
 				}
 				else if(pokemon_bag[3] && (x>=ConvertCoordx(-0.05) && x<=ConvertCoordx(0.23) && y>=ConvertCoordy(0.47) && y<=ConvertCoordy(0.19))){//003
-					//pokemon_bag[3] = 0;
-					release_pokemon(3);
+					pokemon_bag[3] = 0;
 				}
 				else if(pokemon_bag[4] && (x>=ConvertCoordx(0.19) && x<=ConvertCoordx(0.47) && y>=ConvertCoordy(0.47) && y<=ConvertCoordy(0.19))){//004
-					//pokemon_bag[4] = 0;
-					release_pokemon(4);
+					pokemon_bag[4] = 0;
 				}
 				else if(pokemon_bag[5] && (x>=ConvertCoordx(-0.85) && x<=ConvertCoordx(-0.57) && y>=ConvertCoordy(0.07) && y<=ConvertCoordy(-0.21))){//005
-					//pokemon_bag[5] = 0;
-					release_pokemon(5);
+					pokemon_bag[5] = 0;
 				}
 				else if(pokemon_bag[6] && (x>=ConvertCoordx(-0.45) && x<=ConvertCoordx(-0.17) && y>=ConvertCoordy(0.07) && y<=ConvertCoordy(-0.21))){//006
-					//pokemon_bag[6] = 0;
-					release_pokemon(6);
+					pokemon_bag[6] = 0;
 				}
 				else if(pokemon_bag[7] && (x>=ConvertCoordx(-0.05) && x<=ConvertCoordx(0.23) && y>=ConvertCoordy(0.07) && y<=ConvertCoordy(-0.21))){//007
-					//pokemon_bag[7] = 0;
-					release_pokemon(7);
+					pokemon_bag[7] = 0;
 				}
 				else if(pokemon_bag[8] && (x>=ConvertCoordx(0.19) && x<=ConvertCoordx(0.47) && y>=ConvertCoordy(0.07) && y<=ConvertCoordy(-0.21))){//008
-					//pokemon_bag[8] = 0;
-					release_pokemon(8);
+					pokemon_bag[8] = 0;
 				}
 				else if(pokemon_bag[9] && (x>=ConvertCoordx(-0.85) && x<=ConvertCoordx(-0.57) && y>=ConvertCoordy(-0.33) && y<=ConvertCoordy(-0.61))){//009
-					//pokemon_bag[9] = 0;
-					release_pokemon(9);
+					pokemon_bag[9] = 0;
 				}
 				else if(pokemon_bag[10] && (x>=ConvertCoordx(-0.45) && x<=ConvertCoordx(-0.17) && y>=ConvertCoordy(-0.33) && y<=ConvertCoordy(-0.61))){//010
 					pokemon_bag[10] = 0;
-					release_pokemon(10);
 				}
 				else if(pokemon_bag[11] && (x>=ConvertCoordx(-0.05) && x<=ConvertCoordx(0.23) && y>=ConvertCoordy(-0.33) && y<=ConvertCoordy(-0.61))){//011
-					//pokemon_bag[11] = 0;
-					release_pokemon(11);
+					pokemon_bag[11] = 0;
 				}
 				else if(pokemon_bag[12] && (x>=ConvertCoordx(0.19) && x<=ConvertCoordx(0.47) && y>=ConvertCoordy(-0.33) && y<=ConvertCoordy(-0.61))){//012
-					//pokemon_bag[12] = 0;
-					release_pokemon(12);
+					pokemon_bag[12] = 0;
 				}
 				updateView();
 			}
@@ -2568,7 +2530,6 @@ void My_Keyboard(unsigned char key, int x, int y)
 		case '2':
 		{
 					camera.mode3D = 0;
-
 					break;
 		}
 			////////////////////////////////Edit: change to 3rd person perspective mode
