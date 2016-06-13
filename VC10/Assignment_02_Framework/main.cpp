@@ -26,8 +26,8 @@
 #define FACE_DOWN 2
 #define POKEMON_NUM 12
 
-const int window_width = 1000;
-const int window_height = 1000;
+const int window_width = 800;
+const int window_height = 800;
 
 GLubyte timer_cnt = 0;
 bool timer_enabled = true;
@@ -1560,9 +1560,19 @@ class GameUI{
 				glDrawArrays(GL_TRIANGLE_FAN,4*15,4);
 			}
 			//First per on
-			if(camera.mode3D == 1){
+			else if(camera.mode3D == 1){
 				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_2D, this->tex[12]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*14,4);
+				//Third per off
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->tex[13]);
+				glDrawArrays(GL_TRIANGLE_FAN,4*15,4);
+			}
+			//GOD
+			else if(camera.mode3D == 0){
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, this->tex[11]);
 				glDrawArrays(GL_TRIANGLE_FAN,4*14,4);
 				//Third per off
 				glActiveTexture(GL_TEXTURE0);
@@ -2226,6 +2236,7 @@ void My_Display()
 	else if(gameMode == GAME_MODE)
 	{
 		if(gameUI.mapPress) gameUI.DrawCatchList();
+		if(gameUI.setPress) gameUI.DrawSettingList();
 		gameUI.DrawMode();
 
 	}
@@ -2322,9 +2333,12 @@ void My_Mouse(int button, int state, int x, int y)
 			gameUI.mapPress = 0;
 			gameUI.setPress = 0;
 			if(x>=ConvertCoordx(-0.3) && x<=ConvertCoordx(0.3) && y>=ConvertCoordy(-0.25) && y<=ConvertCoordy(-0.45)) gameMode = GAME_MODE;
-			else if(x>=ConvertCoordx(-0.3) && x<=ConvertCoordx(0.3) && y>=ConvertCoordy(-0.5) && y<=ConvertCoordy(-0.7)) gameMode = VIEW_MODE;
+			else if(x>=ConvertCoordx(-0.3) && x<=ConvertCoordx(0.3) && y>=ConvertCoordy(-0.5) && y<=ConvertCoordy(-0.7)){
+				gameMode = VIEW_MODE;
+				camera.mode3D=0;
+			}
 		}
-		else if(gameMode == VIEW_MODE)
+		else if(gameMode == VIEW_MODE || GAME_MODE)
 		{
 			if((pow((x-ConvertCoordx(-0.875)),2) + pow( (y-ConvertCoordy(-0.875)),2)) <= pow(0.075*window_height/2,2)) gameMode = START_MENU; //START MENU
 			else if((pow((x-ConvertCoordx(-0.515)),2) + pow((y-ConvertCoordy(-0.875)),2)) <= pow(0.075*window_height/2,2)){ //SETTINGS
@@ -2360,16 +2374,18 @@ void My_Mouse(int button, int state, int x, int y)
 			}
 			else if(x>=ConvertCoordx(-0.55) && x<=ConvertCoordx(-0.49) && y>=ConvertCoordy(-0.558) && y<=ConvertCoordy(-0.618)){//First
 				camera.mode3D=1;
+				updateView();
 			}
 			else if(x>=ConvertCoordx(-0.46) && x<=ConvertCoordx(-0.4) && y>=ConvertCoordy(-0.558) && y<=ConvertCoordy(-0.618)){//Third
 				camera.mode3D=3;
+				updateView();
 			}
 			else{ //DEBUG
 				//gameUI.mapPress = 0;
 				//gameUI.setPress = 0;
 			}
 		}
-		else if(gameMode == GAME_MODE)
+		if(gameMode == GAME_MODE)
 		{
 			if((pow((x-ConvertCoordx(-0.875)),2) + pow( (y-ConvertCoordy(-0.875)),2)) <= pow(0.075*window_height/2,2)) gameMode = START_MENU; //START MENU
 			else if((pow((x-ConvertCoordx(-0.695)),2) + pow((y-ConvertCoordy(-0.875)),2)) <= pow(0.075*window_height/2,2)){ //MAP
@@ -2417,6 +2433,7 @@ void My_Mouse(int button, int state, int x, int y)
 				else if(pokemon_bag[12] && (x>=ConvertCoordx(0.19) && x<=ConvertCoordx(0.47) && y>=ConvertCoordy(-0.33) && y<=ConvertCoordy(-0.61))){//012
 					pokemon_bag[12] = 0;
 				}
+				updateView();
 			}
 			else{ //DEBUG
 				//gameUI.mapPress = 0;
